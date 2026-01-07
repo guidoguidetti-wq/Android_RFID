@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Product ID (Highlighted in blue) -->
+        <TextView
+            android:id="@+id/tvProductId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PROD-123"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2196F3"
+            android:background="#E3F2FD"
+            android:padding="8dp" />
+
+        <!-- Fields fld01, fld02, fld03 -->
+        <TextView
+            android:id="@+id/tvFld01"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="fld01: Value"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tvFld02"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="fld02: Value"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/tvFld03"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="fld03: Value"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:layout_marginTop="4dp" />
+
+        <!-- fldd01 (Highlighted in green) -->
+        <TextView
+            android:id="@+id/tvFldd01"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Description"
+            android:textSize="15sp"
+            android:textColor="#4CAF50"
+            android:background="#E8F5E9"
+            android:padding="8dp"
+            android:layout_marginTop="8dp" />
+
+        <!-- EPC -->
+        <TextView
+            android:id="@+id/tvEpc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EPC: 3008..."
+            android:textSize="12sp"
+            android:textColor="#999999"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
