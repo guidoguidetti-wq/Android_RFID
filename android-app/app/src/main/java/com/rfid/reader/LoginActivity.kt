@@ -21,6 +21,9 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Inizializza RetrofitClient con URL dalle SharedPreferences
+        RetrofitClient.init(this)
+
         sessionManager = SessionManager(this)
 
         // Se già loggato, vai al Dashboard

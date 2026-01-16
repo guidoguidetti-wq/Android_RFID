@@ -118,6 +118,27 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d(TAG, "Beep volume set to: $volume")
             Toast.makeText(this, "Volume beep: $volume", Toast.LENGTH_SHORT).show()
         }
+
+        // Backend URL
+        binding.etBackendUrl.setText(settingsManager.getBackendUrl())
+        binding.btnSaveUrl.setOnClickListener {
+            var url = binding.etBackendUrl.text.toString().trim()
+            if (url.isNotEmpty()) {
+                // Assicura che l'URL termini con /
+                if (!url.endsWith("/")) {
+                    url = "$url/"
+                }
+                settingsManager.setBackendUrl(url)
+                // Aggiorna RetrofitClient con il nuovo URL
+                RetrofitClient.updateBaseUrl(url)
+                Toast.makeText(this, "URL salvato: $url", Toast.LENGTH_SHORT).show()
+                binding.tvUrlStatus.text = "URL aggiornato!"
+                binding.tvUrlStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+                android.util.Log.d(TAG, "Backend URL set to: $url")
+            } else {
+                Toast.makeText(this, "Inserisci un URL valido", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun loadZones() {

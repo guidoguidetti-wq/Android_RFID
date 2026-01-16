@@ -70,7 +70,7 @@ cd android-app
 
 ### Tabelle Principali
 
-**Items** (33 rows): EPC censiti
+**Items** (83 rows): EPC censiti
 - `item_id` (PK): VARCHAR(50) - EPC del tag RFID
 - `tid`: VARCHAR(50) - TID (Tag Identifier) del chip
 - `date_creation`: TIMESTAMP - Data prima registrazione
@@ -80,7 +80,7 @@ cd android-app
 - `item_product_id`: VARCHAR(50) - Prodotto associato (FK -> Products)
 - `nfc_uid`: TEXT - UID NFC se presente
 
-**Movements** (352+ rows): Storico completo letture RFID
+**Movements** (639+ rows): Storico completo letture RFID
 - `mov_id` (PK): INTEGER - ID movimento (auto-increment)
 - `mov_epc`: VARCHAR(50) - EPC letto
 - `mov_dest_place`: VARCHAR(50) - Luogo di destinazione
@@ -96,8 +96,9 @@ cd android-app
 - `mov_ref`: VARCHAR(80) - Riferimento
 - `mov_antpw1-4`: INTEGER - Potenza antenna 1-4
 - `mov_antenna`: INTEGER - Antenna utilizzata
+- `mov_mref_id`: INTEGER - FK a movements_reference (opzionale)
 
-**Places** (2 rows): Luoghi fisici
+**Places** (5 rows): Luoghi fisici
 - `place_id` (PK): VARCHAR(50) - Es: "WHS" (Warehouse), "EV1" (Event)
 - `place_name`: TEXT - Nome del luogo
 - `place_type`: VARCHAR(50) - Tipologia luogo
@@ -107,12 +108,12 @@ cd android-app
 - `zone_name`: TEXT - Nome zona
 - `zone_type`: VARCHAR(50) - Tipologia zona
 
-**Products** (16 rows): Anagrafica prodotti
+**Products** (1674 rows): Anagrafica prodotti
 - `product_id` (PK): VARCHAR
 - `fld01-fld10`: TEXT - Campi dati generici
 - `fldd01-fldd10`: TEXT - Campi dati descrittivi
 
-**Products_labels** (2 rows): Metadati campi prodotti
+**Products_labels** (5 rows): Metadati campi prodotti
 - `pr_fld` (PK): VARCHAR - Nome campo (es. "fld01")
 - `pr_lab`: VARCHAR - Label visualizzata
 - `pr_des`: TEXT - Descrizione campo
@@ -126,7 +127,84 @@ cd android-app
 - `image`: TEXT
 - `permission`: INTEGER (default: 0)
 
-**NOTA IMPORTANTE**: I nomi delle tabelle usano PascalCase ("Items", "Movements", ecc.) quindi devono essere quotati nelle query: `"Items"`, `"Movements"`, ecc.
+### Tabelle Gestione Utenti
+
+**users** (2 rows): Utenti del sistema
+- `usr_id` (PK): INTEGER
+- `usr_name`: VARCHAR(50) - Nome utente
+- `usr_pwd`: VARCHAR(50) - Password
+- `usr_def_place`: VARCHAR(20) - Place di default
+- `usr_role`: INTEGER - Ruolo utente
+
+### Tabelle Inventario
+
+**inventories** (4 rows): Inventari
+- `inv_id` (PK): INTEGER
+- `inv_name`: TEXT - Nome inventario
+- `inv_place_id`: VARCHAR(20) - Place associato
+- `inv_start_date`: DATE - Data inizio
+- `inv_state`: VARCHAR(20) - Stato (es: "open", "closed")
+- `inv_note`: TEXT - Note
+
+**inventory_items** (1809 rows): Items negli inventari
+- `inv_it_id` (PK): INTEGER (auto-increment)
+- `int_inv_id`: INTEGER - FK -> inventories(inv_id)
+- `int_epc`: VARCHAR(50) - EPC dell'item
+
+### Tabelle Checklist
+
+**checklist** (0 rows): Checklist per verifiche
+- `chk_id` (PK): INTEGER (auto-increment)
+- `chk_code`: VARCHAR(20) - Codice checklist
+- `chk_type`: VARCHAR(20) - Tipologia
+- `chk_place`: VARCHAR(20) - Place associato
+- `chk_zone`: VARCHAR(20) - Zone associata
+- `chk_notes`: TEXT - Note
+- `chk_creationdate`: DATE - Data creazione
+
+**checklist_products** (0 rows): Prodotti nelle checklist
+- `ckp_id` (PK): INTEGER (auto-increment)
+- `ckp_chk_id`: INTEGER - FK -> checklist
+- `ckp_product_id`: INTEGER - FK -> Products
+- `ckp_qta`: INTEGER - Quantità rilevata
+- `ckp_qta_exp`: INTEGER - Quantità attesa
+- `ckp_qta_unexp`: INTEGER - Quantità inaspettata
+- `ckp_qta_missing`: INTEGER - Quantità mancante
+
+**checklist_products_items** (0 rows): Items EPC nelle checklist
+- `cki_id` (PK): INTEGER (auto-increment)
+- `cki_chk_id`: INTEGER - FK -> checklist
+- `cki_product_id`: INTEGER - FK -> Products
+- `cki_epc`: VARCHAR(50) - EPC dell'item
+
+### Tabelle Riferimenti
+
+**movements_reference** (2 rows): Riferimenti per movimenti
+- `mref_id` (PK): INTEGER (auto-increment)
+- `mref_cod`: VARCHAR(20) - Codice riferimento
+- `mref_description`: VARCHAR(50) - Descrizione
+- `mref_notes`: TEXT - Note
+
+**references** (0 rows): Riferimenti generici
+- `ref_id` (PK): INTEGER (auto-increment)
+- `ref_code`: VARCHAR(50) - Codice
+- `ref_description`: TEXT - Descrizione
+
+### Tabelle Work Orders
+
+**work_orders** (23 rows): Ordini di lavoro
+- `wo_sku`: VARCHAR(20) - SKU prodotto
+- `wo_qta`: INTEGER - Quantità
+- `wo_rif`: VARCHAR(20) - Riferimento
+- `wo_printed`: INTEGER (default: 0) - Flag stampato
+
+**work_orders_old** (0 rows): Ordini di lavoro archiviati
+- `wo_rif` (PK): VARCHAR - Riferimento
+- `wo_sku`: VARCHAR - SKU (FK -> Products.product_id)
+- `wo_qta`: INTEGER (default: 0) - Quantità
+- `wo_printed`: INTEGER (default: 0) - Flag stampato
+
+**NOTA IMPORTANTE**: I nomi delle tabelle usano PascalCase ("Items", "Movements", ecc.) o lowercase ("checklist", "users", ecc.) - verificare con `inspect_db.js`. Le tabelle PascalCase devono essere quotate nelle query: `"Items"`, `"Movements"`, ecc.
 
 ## Architecture & Key Files
 

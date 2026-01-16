@@ -23,6 +23,7 @@ const zonesRoutes = require('./routes/zones');
 const productsRoutes = require('./routes/products');
 const authRoutes = require('./routes/auth');
 const inventoriesRoutes = require('./routes/inventories');
+const checklistRoutes = require('./routes/checklist');
 
 app.use('/api/rfid', rfidRoutes);
 app.use('/api/items', itemsRoutes);
@@ -31,6 +32,7 @@ app.use('/api/zones', zonesRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/inventories', inventoriesRoutes);
+app.use('/api/checklist', checklistRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -110,6 +112,11 @@ app.get('/api', (req, res) => {
         'POST /api/products': 'Crea product',
         'PUT /api/products/:id': 'Aggiorna product',
         'DELETE /api/products/:id': 'Elimina product'
+      },
+      checklist: {
+        'GET /api/checklist': 'Tutte le checklist (filtro opzionale ?type=CHI)',
+        'GET /api/checklist/:id': 'Checklist specifica',
+        'POST /api/checklist': 'Crea checklist'
       }
     }
   });

@@ -100,13 +100,192 @@
             <EditText
                 android:id="@+id/etNotes"
                 android:layout_width="match_parent"
-                android:layout_height="120dp"
+                android:layout_height="100dp"
                 android:hint="Note opzionali"
                 android:textSize="16sp"
                 android:padding="12dp"
                 android:gravity="top|start"
                 android:inputType="textMultiLine"
                 android:layout_marginBottom="16dp" />
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#CCCCCC"
+                android:layout_marginBottom="16dp" />
+
+            <!-- SEZIONE: Inventario da CheckList -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <CheckBox
+                    android:id="@+id/cbFromChecklist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Inventario da CheckList"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/spinnerChecklist"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@android:drawable/btn_dropdown"
+                    android:enabled="false" />
+            </LinearLayout>
+
+            <!-- SEZIONE: Inventario da Giacenza RFID -->
+            <CheckBox
+                android:id="@+id/cbFromRfidStock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Inventario da Giacenza RFID"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Last Place -->
+            <LinearLayout
+                android:id="@+id/layoutLastPlace"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="8dp"
+                android:alpha="0.5">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Last Place:"
+                    android:textSize="14sp"
+                    android:textColor="#666666" />
+
+                <Spinner
+                    android:id="@+id/spinnerLastPlace"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@android:drawable/btn_dropdown"
+                    android:enabled="false" />
+            </LinearLayout>
+
+            <!-- Last Zone (multi-select) -->
+            <LinearLayout
+                android:id="@+id/layoutLastZone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginStart="32dp"
+                android:layout_marginBottom="16dp"
+                android:alpha="0.5">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Last Zone:"
+                    android:textSize="14sp"
+                    android:textColor="#666666" />
+
+                <TextView
+                    android:id="@+id/tvSelectedZones"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@android:drawable/btn_dropdown"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:hint="Seleziona zone..."
+                    android:textSize="14sp"
+                    android:enabled="false" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#CCCCCC"
+                android:layout_marginBottom="16dp" />
+
+            <!-- SEZIONE: Transfer Results to -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Transfer Results to"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Detected Items -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="120dp"
+                    android:layout_height="wrap_content"
+                    android:text="Detected Items:"
+                    android:textSize="14sp"
+                    android:textColor="#4CAF50" />
+
+                <Spinner
+                    android:id="@+id/spinnerDetPlace"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@android:drawable/btn_dropdown" />
+
+                <Spinner
+                    android:id="@+id/spinnerDetZone"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@android:drawable/btn_dropdown" />
+            </LinearLayout>
+
+            <!-- Missed Items -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="120dp"
+                    android:layout_height="wrap_content"
+                    android:text="Missed Items:"
+                    android:textSize="14sp"
+                    android:textColor="#F44336" />
+
+                <Spinner
+                    android:id="@+id/spinnerMisPlace"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@android:drawable/btn_dropdown" />
+
+                <Spinner
+                    android:id="@+id/spinnerMisZone"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@android:drawable/btn_dropdown" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

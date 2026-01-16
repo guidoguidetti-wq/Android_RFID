@@ -1,5 +1,7 @@
 package com.rfid.reader.network
 
+import android.content.Context
+import android.content.SharedPreferences
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -7,9 +9,14 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // URL del backend - configurato per device fisico
-    private const val BASE_URL = "http://192.168.1.32:3000/"
-    // Per emulatore Android usa: "http://10.0.2.2:3000/"
+    // Default URL - usato se non configurato nelle SharedPreferences
+    private const val DEFAULT_BASE_URL = "http://192.168.0.55:3000/"
+    private const val PREFS_NAME = "RFIDSettings"
+    private const val KEY_BACKEND_URL = "backend_url"
+
+    private var currentBaseUrl: String = DEFAULT_BASE_URL
+    private var retrofit: Retrofit? = null
+    private var _apiService: ApiService? = null
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -22,11 +29,48 @@ object RetrofitClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    /**
+     * Inizializza RetrofitClient con il Context per leggere le SharedPreferences
+     * Chiamare in Application.onCreate() o nella prima Activity
+     */
+    fun init(context: Context) {
+        val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        currentBaseUrl = prefs.getString(KEY_BACKEND_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
+        rebuildRetrofit()
+        android.util.Log.d("RetrofitClient", "Initialized with URL: $currentBaseUrl")
+    }
 
-    val apiService: ApiService = retrofit.create(ApiService::class.java)
+    /**
+     * Aggiorna l'URL del backend e ricostruisce il client Retrofit
+     */
+    fun updateBaseUrl(newUrl: String) {
+        if (newUrl != currentBaseUrl) {
+            currentBaseUrl = newUrl
+            rebuildRetrofit()
+            android.util.Log.d("RetrofitClient", "Updated URL to: $currentBaseUrl")
+        }
+    }
+
+    /**
+     * Ritorna l'URL corrente del backend
+     */
+    fun getCurrentBaseUrl(): String = currentBaseUrl
+
+    private fun rebuildRetrofit() {
+        retrofit = Retrofit.Builder()
+            .baseUrl(currentBaseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        _apiService = retrofit!!.create(ApiService::class.java)
+    }
+
+    val apiService: ApiService
+        get() {
+            if (_apiService == null) {
+                // Fallback: crea con URL di default se non inizializzato
+                rebuildRetrofit()
+            }
+            return _apiService!!
+        }
 }

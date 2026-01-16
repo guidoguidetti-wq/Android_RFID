@@ -151,7 +151,20 @@ exports.getStats = async (req, res) => {
  */
 exports.create = async (req, res) => {
   try {
-    const { name, note, placeId } = req.body;
+    const {
+      name,
+      note,
+      placeId,
+      invChkId,      // ID checklist (0 se non da checklist)
+      invZones,      // Zone separate da virgola (es: "Z1,Z2,Z3") - DEPRECATED
+      invDetPlace,   // Place per detected items
+      invDetZone,    // Zone per detected items
+      invMisPlace,   // Place per missed items
+      invMisZone,    // Zone per missed items
+      invLast,       // Boolean: true se inventario da giacenza RFID
+      invLastPlace,  // Place per inventario da giacenza
+      invLastZones   // Zone per inventario da giacenza (separate da virgola)
+    } = req.body;
 
     // Validazione input (invId e userId non richiesti)
     if (!name || !placeId) {
@@ -161,8 +174,24 @@ exports.create = async (req, res) => {
     }
 
     console.log(`Creating inventory '${name}' for place ${placeId}`);
+    console.log(`  chkId: ${invChkId}, invLast: ${invLast}`);
+    console.log(`  lastPlace: ${invLastPlace}, lastZones: ${invLastZones}`);
+    console.log(`  detected: ${invDetPlace}/${invDetZone}, missed: ${invMisPlace}/${invMisZone}`);
 
-    const inventory = await Inventory.create({ name, note, placeId });
+    const inventory = await Inventory.create({
+      name,
+      note,
+      placeId,
+      chkId: invChkId || 0,
+      zones: invZones || null,
+      detPlace: invDetPlace || null,
+      detZone: invDetZone || null,
+      misPlace: invMisPlace || null,
+      misZone: invMisZone || null,
+      invLast: invLast || false,
+      invLastPlace: invLastPlace || null,
+      invLastZones: invLastZones || null
+    });
 
     res.status(201).json({
       success: true,

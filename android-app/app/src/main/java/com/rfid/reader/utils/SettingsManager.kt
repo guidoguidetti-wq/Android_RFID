@@ -18,6 +18,7 @@ class SettingsManager(context: Context) {
         private const val KEY_EPC_PREFIX_FILTER = "epc_prefix_filter"
         private const val KEY_INVENTORY_ZONE = "inventory_zone"
         private const val KEY_BEEP_VOLUME = "beep_volume"
+        private const val KEY_BACKEND_URL = "backend_url"
 
         // Product filter keys
         private const val KEY_FILTER_FLD01 = "filter_fld01"
@@ -34,6 +35,7 @@ class SettingsManager(context: Context) {
         const val DEFAULT_POWER = 270
         const val DEFAULT_MIN_RSSI = -70
         const val DEFAULT_BEEP_VOLUME = "medium" // low, medium, high
+        const val DEFAULT_BACKEND_URL = "http://192.168.0.55:3000/"
     }
 
     // Tag Reading Mode
@@ -59,6 +61,10 @@ class SettingsManager(context: Context) {
     // Beep Volume
     fun getBeepVolume(): String = prefs.getString(KEY_BEEP_VOLUME, DEFAULT_BEEP_VOLUME) ?: DEFAULT_BEEP_VOLUME
     fun setBeepVolume(volume: String) = prefs.edit().putString(KEY_BEEP_VOLUME, volume).apply()
+
+    // Backend URL
+    fun getBackendUrl(): String = prefs.getString(KEY_BACKEND_URL, DEFAULT_BACKEND_URL) ?: DEFAULT_BACKEND_URL
+    fun setBackendUrl(url: String) = prefs.edit().putString(KEY_BACKEND_URL, url).apply()
 
     // Product Filters
     fun getProductFilter(field: String): String {

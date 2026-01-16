@@ -194,7 +194,26 @@ data class ItemHistoryResponse(
 data class CreateInventoryRequest(
     val name: String,
     val note: String?,
-    val placeId: String
+    val placeId: String,
+    val invChkId: Int = 0,           // ID checklist (0 se non da checklist)
+    val invZones: String? = null,    // Zone separate da virgola - DEPRECATED
+    val invDetPlace: String? = null, // Place per detected items
+    val invDetZone: String? = null,  // Zone per detected items
+    val invMisPlace: String? = null, // Place per missed items
+    val invMisZone: String? = null,  // Zone per missed items
+    val invLast: Boolean = false,    // true se inventario da giacenza RFID
+    val invLastPlace: String? = null, // Place per inventario da giacenza
+    val invLastZones: String? = null  // Zone per inventario da giacenza (separate da virgola)
+)
+
+// Checklist Models
+data class ChecklistResponse(
+    val chk_id: Int,
+    val chk_code: String?,
+    val chk_place: String?,
+    val chk_zone: String?,
+    val chk_notes: String?,
+    val chk_creationdate: String?
 )
 
 data class CreateInventoryResponse(
@@ -272,6 +291,13 @@ interface ApiService {
 
     @DELETE("api/inventories/{invId}")
     suspend fun deleteInventory(@Path("invId") invId: Int): DeleteInventoryResponse
+
+    // Checklist Endpoints
+    @GET("api/checklist")
+    suspend fun getChecklists(@Query("type") type: String? = null): Response<List<ChecklistResponse>>
+
+    @GET("api/checklist/{id}")
+    suspend fun getChecklistById(@Path("id") id: Int): Response<ChecklistResponse>
 
     // RFID Endpoints
     @POST("api/rfid/scan")

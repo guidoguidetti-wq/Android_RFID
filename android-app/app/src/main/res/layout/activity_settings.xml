@@ -243,5 +243,63 @@
             android:layout_height="wrap_content"
             android:padding="16dp"
             android:layout_margin="16dp" />
+
+        <!-- Backend URL Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Backend Server"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:padding="16dp"
+            android:background="#F0F0F0"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="URL Backend (es: http://192.168.0.55:3000/)"
+                android:textSize="12sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <EditText
+                    android:id="@+id/etBackendUrl"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="http://192.168.0.55:3000/"
+                    android:inputType="textUri"
+                    android:padding="12dp" />
+
+                <Button
+                    android:id="@+id/btnSaveUrl"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Salva"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvUrlStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Riavvia l'app dopo aver cambiato l'URL"
+                android:textSize="12sp"
+                android:textColor="#FF9800"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

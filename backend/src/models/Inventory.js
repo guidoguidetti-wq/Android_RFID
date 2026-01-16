@@ -60,16 +60,43 @@ class Inventory {
    * @param {string} invData.name - Nome inventario
    * @param {string} invData.note - Note
    * @param {string} invData.placeId - Place ID
+   * @param {number} invData.chkId - Checklist ID (0 se non da checklist)
+   * @param {string} invData.zones - Zone IDs separate da virgola (es: "Z1,Z2,Z3") - DEPRECATED, usa invLastZones
+   * @param {string} invData.detPlace - Place per detected items
+   * @param {string} invData.detZone - Zone per detected items
+   * @param {string} invData.misPlace - Place per missed items
+   * @param {string} invData.misZone - Zone per missed items
+   * @param {boolean} invData.invLast - true se inventario da giacenza RFID
+   * @param {string} invData.invLastPlace - Place per inventario da giacenza
+   * @param {string} invData.invLastZones - Zone per inventario da giacenza (separate da virgola)
    * @returns {Promise<Object>} Inventario creato (con inv_id auto-generato)
    */
   static async create(invData) {
-    const { name, note, placeId } = invData;
+    const {
+      name,
+      note,
+      placeId,
+      chkId = 0,
+      zones = null,
+      detPlace = null,
+      detZone = null,
+      misPlace = null,
+      misZone = null,
+      invLast = false,
+      invLastPlace = null,
+      invLastZones = null
+    } = invData;
+
     const result = await pool.query(
-      `INSERT INTO "inventories" (inv_name, inv_note, inv_place_id, inv_state, inv_start_date)
-       VALUES ($1, $2, $3, 'OPEN', CURRENT_DATE) RETURNING *`,
-      [name, note, placeId]
+      `INSERT INTO "inventories" (
+        inv_name, inv_note, inv_place_id, inv_state, inv_start_date,
+        inv_chk_id, inv_zones, inv_det_place, inv_det_zone, inv_mis_place, inv_mis_zone,
+        inv_last, inv_last_place, inv_last_zones
+      )
+       VALUES ($1, $2, $3, 'OPEN', CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [name, note, placeId, chkId, zones, detPlace, detZone, misPlace, misZone, invLast, invLastPlace, invLastZones]
     );
-    console.log(`Inventory '${result.rows[0].inv_id}' created for place '${placeId}'`);
+    console.log(`Inventory '${result.rows[0].inv_id}' created for place '${placeId}' (chkId: ${chkId}, invLast: ${invLast}, lastZones: ${invLastZones})`);
     return result.rows[0];
   }
 
