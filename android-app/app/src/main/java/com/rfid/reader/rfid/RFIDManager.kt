@@ -203,6 +203,14 @@ class RFIDManager private constructor(private val context: Context) {
                 } catch (e: Exception) {
                     Log.w(TAG, "Could not disable hardware beeper: ${e.message}")
                 }
+
+                // ✅ Configura trigger mode per inventory
+                try {
+                    config.setTriggerMode(ENUM_TRIGGER_MODE.RFID_MODE, true)
+                    Log.d(TAG, "Trigger mode set to RFID_MODE")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not set trigger mode: ${e.message}")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Configuration error", e)
             }

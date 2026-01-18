@@ -37,8 +37,7 @@ class RssiMonitorActivity : AppCompatActivity() {
         setupObservers()
         setupListeners()
 
-        // Auto-start scan
-        viewModel.startScan()
+        // Don't auto-start scan - operator must press trigger or button
     }
 
     private fun setupUI() {
@@ -68,7 +67,7 @@ class RssiMonitorActivity : AppCompatActivity() {
 
         // Scanning state
         viewModel.isScanning.observe(this) { scanning ->
-            binding.btnPlayPause.text = if (scanning) "⏸ STOP" else "▶ START"
+            binding.btnPlayPause.text = if (scanning) "⏸" else "▶"
         }
 
         // Connection status

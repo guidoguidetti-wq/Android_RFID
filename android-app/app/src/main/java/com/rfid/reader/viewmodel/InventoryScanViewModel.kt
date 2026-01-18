@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel per InventoryScanActivity
  * Gestisce la scansione RFID e l'invio dei tag a un inventario specifico
+ * Include logica Expected/Unexpected/Lost per inventari checklist e last-place
  */
 class InventoryScanViewModel(application: Application) : AndroidViewModel(application) {
     private val rfidManager = RFIDManager.getInstance(application)
@@ -33,6 +34,29 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
     // Contatore tag già presenti nell'inventario all'inizio
     private var initialInventoryCount: Int = 0
+
+    // ========== Expected/Unexpected/Lost Counters ==========
+    private val _expectedCount = MutableLiveData<Int>(0)
+    val expectedCount: LiveData<Int> = _expectedCount
+
+    private val _unexpectedCount = MutableLiveData<Int>(0)
+    val unexpectedCount: LiveData<Int> = _unexpectedCount
+
+    private val _lostCount = MutableLiveData<Int>(0)
+    val lostCount: LiveData<Int> = _lostCount
+
+    // Modalità inventario: "normal", "checklist", "last_place" (stock)
+    private var inventoryMode: String = "normal"
+
+    // LiveData per modalità inventario (per UI)
+    private val _inventoryModeLive = MutableLiveData<String>("normal")
+    val inventoryModeLive: LiveData<String> = _inventoryModeLive
+
+    // LiveData per totalExpected (per mostrare nel badge)
+    private val _totalExpectedLive = MutableLiveData<Int>(0)
+    val totalExpectedLive: LiveData<Int> = _totalExpectedLive
+
+    // ✅ Strutture dati per tracking locale RIMOSSE (gestito dal backend)
 
     // Stato connessione reader
     private val _readerStatus = MutableLiveData<String>("Disconnected")
@@ -55,11 +79,13 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
     /**
      * Imposta l'inventario corrente e carica il count esistente dal DB
+     * Carica anche le expectations per la logica Expected/Unexpected/Lost
      */
     fun setInventory(inventoryId: Int) {
         currentInventoryId = inventoryId
         android.util.Log.d(TAG, "Inventory set to: $inventoryId")
         loadExistingCount()
+        loadExpectations()
     }
 
     /**
@@ -82,6 +108,125 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
+
+    /**
+     * Carica le expectations dall'API per determinare la modalità dell'inventario
+     * e inizializzare i counters Expected/Unexpected/Lost
+     */
+    private fun loadExpectations() {
+        viewModelScope.launch {
+            try {
+                android.util.Log.d(TAG, "Loading expectations for inventory $currentInventoryId")
+                val response = apiService.getInventoryExpectations(currentInventoryId)
+
+                if (response.isSuccessful) {
+                    val data = response.body()!!
+                    inventoryMode = data.mode
+                    _inventoryModeLive.value = data.mode
+                    _totalExpectedLive.value = data.totalExpected
+                    android.util.Log.d(TAG, "Inventory mode: $inventoryMode, totalExpected: ${data.totalExpected}")
+
+                    when (data.mode) {
+                        "checklist" -> {
+                            android.util.Log.d(TAG, "Checklist mode: ${data.checklistProducts.size} products, totalExpected=${data.totalExpected}")
+                            // Initialize counters: all items start as "lost" until scanned
+                            _expectedCount.value = 0
+                            _unexpectedCount.value = 0
+                            _lostCount.value = data.totalExpected
+                            // Then load existing status counters from DB (will update based on already scanned items)
+                            loadExistingStatusCounters(data.totalExpected)
+                        }
+                        "last_place" -> {
+                            android.util.Log.d(TAG, "Last-place (Stock) mode: ${data.expectedItems.size} expected EPCs")
+                            // Initialize counters: all items start as "lost" until scanned
+                            _expectedCount.value = 0
+                            _unexpectedCount.value = 0
+                            _lostCount.value = data.totalExpected
+                            // Then load existing status counters from DB (will update based on already scanned items)
+                            loadExistingStatusCounters(data.totalExpected)
+                        }
+                        else -> {
+                            // Normal mode - reset tutti i counters
+                            _expectedCount.value = 0
+                            _unexpectedCount.value = 0
+                            _lostCount.value = 0
+                            _totalExpectedLive.value = 0
+                            _inventoryModeLive.value = "normal"
+                            android.util.Log.d(TAG, "Normal mode: no expectations")
+                        }
+                    }
+                } else {
+                    android.util.Log.e(TAG, "Failed to load expectations: ${response.code()}")
+                    // Fallback a normal mode
+                    inventoryMode = "normal"
+                    _inventoryModeLive.value = "normal"
+                    _totalExpectedLive.value = 0
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error loading expectations", e)
+                inventoryMode = "normal"
+                _inventoryModeLive.value = "normal"
+                _totalExpectedLive.value = 0
+            }
+        }
+    }
+
+    /**
+     * Carica i contatori existing Expected/Unexpected/Lost dalla tabella inventory_items
+     */
+    private fun loadExistingStatusCounters(totalExpected: Int) {
+        viewModelScope.launch {
+            try {
+                android.util.Log.d(TAG, "Loading existing status counters for inventory $currentInventoryId")
+                val response = apiService.getInventoryItemsDetails(currentInventoryId)
+
+                if (response.isSuccessful) {
+                    val items = response.body() ?: emptyList()
+
+                    // Conta per status dalla tabella (ora include inv_lost)
+                    val expCount = items.count { it.inv_expected == true }
+                    val unexpCount = items.count { it.inv_unexpected == true }
+                    val lostCountFromDB = items.count { it.inv_lost == true }
+
+                    _expectedCount.value = expCount
+                    _unexpectedCount.value = unexpCount
+
+                    // ✅ Per checklist mode: calcola lost come totalExpected - expectedCount
+                    // Per last_place mode: usa il valore dal DB
+                    if (inventoryMode == "checklist") {
+                        _lostCount.value = Math.max(0, totalExpected - expCount)
+                        android.util.Log.d(TAG, "Checklist mode: Lost = totalExpected($totalExpected) - expected($expCount) = ${_lostCount.value}")
+                    } else {
+                        _lostCount.value = lostCountFromDB
+                        android.util.Log.d(TAG, "Stock mode: Lost from DB = $lostCountFromDB")
+                    }
+
+                    // Aggiungi agli scannedEpcs solo se NON è lost (per permettere di ri-scansionarli)
+                    items.forEach { item ->
+                        if (item.inv_lost != true) {
+                            scannedEpcs.add(item.epc)
+                        }
+                    }
+
+                    android.util.Log.d(TAG, "Loaded existing counters - Exp: $expCount, Unexp: $unexpCount, Lost: ${_lostCount.value}")
+                } else {
+                    android.util.Log.e(TAG, "Failed to load existing status counters: ${response.code()}")
+                    // Fallback: inizializza con valori default
+                    _expectedCount.value = 0
+                    _unexpectedCount.value = 0
+                    _lostCount.value = totalExpected
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error loading existing status counters", e)
+                _expectedCount.value = 0
+                _unexpectedCount.value = 0
+                _lostCount.value = totalExpected
+            }
+        }
+    }
+
+    // ✅ Funzioni di classificazione locale RIMOSSE
+    // I contatori vengono ora gestiti completamente dal backend e ricevuti via API response
 
     /**
      * Osserva i flow del RFIDManager per aggiornare lo stato
@@ -182,6 +327,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
     /**
      * Invia un tag scannerizzato al backend per l'inventario corrente
+     * e classifica l'EPC per aggiornare Expected/Unexpected/Lost
      */
     private fun sendTagToInventory(epc: String) {
         viewModelScope.launch {
@@ -213,12 +359,21 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                     val body = response.body()
                     val totalCount = body?.totalCount ?: 0
                     val isNew = body?.isNew ?: false
+                    val productId = body?.productId
+                    val counters = body?.counters
 
-                    android.util.Log.d(TAG, "Scan sent successfully - Total: $totalCount, IsNew: $isNew")
+                    android.util.Log.d(TAG, "Scan sent successfully - Total: $totalCount, IsNew: $isNew, ProductId: $productId")
 
                     // Aggiorna contatore usando il count dal backend (che è sempre accurato)
                     _totalTagsCount.value = totalCount
-                    android.util.Log.d(TAG, "Updated total count from backend: $totalCount")
+
+                    // ✅ NUOVO: Usa i contatori dal backend invece di calcolarli localmente
+                    if (counters != null) {
+                        _expectedCount.value = counters.expectedCount
+                        _unexpectedCount.value = counters.unexpectedCount
+                        _lostCount.value = counters.lostCount
+                        android.util.Log.d(TAG, "Updated counters from backend - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}")
+                    }
                 } else {
                     android.util.Log.e(TAG, "Error sending scan: ${response.code()}")
                 }
@@ -275,11 +430,16 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
     /**
      * Reset dei contatori per nuova sessione di scansione
+     * Ricarica i contatori dal backend
      */
     fun resetCounters() {
         scannedEpcs.clear()
+
+        // Ricarica conteggio e expectations
         loadExistingCount()
-        android.util.Log.d(TAG, "Counters reset")
+        loadExpectations()
+
+        android.util.Log.d(TAG, "Counters reset - reloaded from backend")
     }
 
     /**
@@ -295,20 +455,29 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
     /**
      * Svuota l'inventario eliminando tutti gli items
+     * Resets ALL counters including Expected/Unexpected/Lost
      */
     suspend fun clearInventory() {
         try {
             val response = apiService.clearInventory(currentInventoryId)
 
             if (response.success) {
-                // Azzerare counter
+                // Azzerare counter principale
                 _totalTagsCount.postValue(0)
                 initialInventoryCount = 0
 
                 // Resettare lista tag scannati in questa sessione
                 scannedEpcs.clear()
 
-                android.util.Log.d(TAG, "Inventory $currentInventoryId cleared successfully. ${response.itemsRemoved} items removed.")
+                // Reset ALL counters (Expected/Unexpected/Lost)
+                _expectedCount.postValue(0)
+                _unexpectedCount.postValue(0)
+                _lostCount.postValue(0)
+
+                // Reload expectations to re-initialize counters properly
+                loadExpectations()
+
+                android.util.Log.d(TAG, "Inventory $currentInventoryId cleared successfully. ${response.itemsRemoved} items removed. All counters reset.")
             } else {
                 throw Exception("Failed to clear inventory: ${response.message}")
             }

@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.rfid.reader.adapters.LocateTag
+import com.rfid.reader.network.ProductResponse
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.rfid.RFIDManager
 import com.rfid.reader.utils.BeepHelper
@@ -39,6 +40,9 @@ class LocateViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _products = MutableLiveData<List<String>>(emptyList())
     val products: LiveData<List<String>> = _products
+
+    private val _selectedProductDetails = MutableLiveData<ProductResponse?>()
+    val selectedProductDetails: LiveData<ProductResponse?> = _selectedProductDetails
 
     private var targetProductId: String? = null
 
@@ -248,6 +252,25 @@ class LocateViewModel(application: Application) : AndroidViewModel(application) 
         _selectedTag.value = null
         checkedTagsCache.clear()
         android.util.Log.d(TAG, "Target product set: $productId")
+        loadProductDetails(productId)
+    }
+
+    private fun loadProductDetails(productId: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getProductById(productId)
+                if (response.isSuccessful) {
+                    _selectedProductDetails.value = response.body()
+                    android.util.Log.d(TAG, "Product details loaded for: $productId")
+                } else {
+                    _selectedProductDetails.value = null
+                    android.util.Log.w(TAG, "Product not found: $productId")
+                }
+            } catch (e: Exception) {
+                _selectedProductDetails.value = null
+                android.util.Log.e(TAG, "Error loading product details", e)
+            }
+        }
     }
 
     fun selectTag(tag: LocateTag) {

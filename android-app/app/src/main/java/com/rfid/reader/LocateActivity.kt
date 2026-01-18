@@ -178,6 +178,27 @@ class LocateActivity : AppCompatActivity() {
             binding.progressConnection.visibility = if (isConnecting) View.VISIBLE else View.GONE
             binding.tvConnectionStatus.visibility = if (isConnecting) View.VISIBLE else View.GONE
         }
+
+        // Observe product details
+        viewModel.selectedProductDetails.observe(this) { product ->
+            if (product != null) {
+                binding.llProductDetails.visibility = View.VISIBLE
+
+                binding.tvLocateFld01.text = product.fld01 ?: ""
+                binding.tvLocateFld01.visibility = if (product.fld01.isNullOrBlank()) View.GONE else View.VISIBLE
+
+                binding.tvLocateFld02.text = product.fld02 ?: ""
+                binding.tvLocateFld02.visibility = if (product.fld02.isNullOrBlank()) View.GONE else View.VISIBLE
+
+                binding.tvLocateFld03.text = product.fld03 ?: ""
+                binding.tvLocateFld03.visibility = if (product.fld03.isNullOrBlank()) View.GONE else View.VISIBLE
+
+                binding.tvLocateFldd01.text = product.fldd01 ?: ""
+                binding.tvLocateFldd01.visibility = if (product.fldd01.isNullOrBlank()) View.GONE else View.VISIBLE
+            } else {
+                binding.llProductDetails.visibility = View.GONE
+            }
+        }
     }
 
     private fun setupListeners() {

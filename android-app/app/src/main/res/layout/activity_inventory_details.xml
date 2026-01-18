@@ -64,6 +64,60 @@
             android:layout_marginTop="4dp" />
     </LinearLayout>
 
+    <!-- Filter Buttons Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:background="#EEEEEE">
+
+        <Button
+            android:id="@+id/btnFilterAll"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="36dp"
+            android:text="All"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2196F3"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnFilterExpected"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="36dp"
+            android:text="Expected"
+            android:textSize="12sp"
+            android:textColor="#4CAF50"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginHorizontal="4dp" />
+
+        <Button
+            android:id="@+id/btnFilterUnexpected"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="36dp"
+            android:text="Unexpected"
+            android:textSize="12sp"
+            android:textColor="#FF9800"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginHorizontal="4dp" />
+
+        <Button
+            android:id="@+id/btnFilterLost"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="36dp"
+            android:text="Lost"
+            android:textSize="12sp"
+            android:textColor="#F44336"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
     <!-- Progress Bar -->
     <ProgressBar
         android:id="@+id/progressBar"

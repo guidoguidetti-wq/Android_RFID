@@ -1,6 +1,6 @@
 {
   "name": "rfid-backend",
-  "version": "1.0.0",
+  "version": "2.2.2",
   "description": "Backend Node.js per applicazione RFID Android con Zebra RFD8500",
   "main": "src/server.js",
   "scripts": {

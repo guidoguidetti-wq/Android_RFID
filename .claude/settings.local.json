@@ -66,7 +66,18 @@
       "Bash(./gradlew installDebug:*)",
       "Bash(./gradlew.bat assembleDebug)",
       "Bash(./gradlew.bat clean assembleDebug)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(PGPASSWORD='iniAD16Z77oS' psql:*)",
+      "Bash(node -e \"\nconst { Pool } = require\\(''pg''\\);\nconst pool = new Pool\\({\n  host: ''57.129.5.234'',\n  port: 5432,\n  database: ''rfid_db'',\n  user: ''rfidmanager'',\n  password: ''iniAD16Z77oS'',\n}\\);\n\nasync function check\\(\\) {\n  // 1. Verifica colonne attuali di inventories\n  const invCols = await pool.query\\(\\\\`\n    SELECT column_name, data_type \n    FROM information_schema.columns \n    WHERE table_name = ''inventories'' \n    ORDER BY ordinal_position\n  \\\\`\\);\n  console.log\\(''=== COLONNE INVENTORIES ===''\\);\n  invCols.rows.forEach\\(r => console.log\\(r.column_name + '': '' + r.data_type\\)\\);\n\n  // 2. Verifica checklist con chk_type = ''CHI''\n  console.log\\(''\\\\n=== CHECKLIST \\(chk_type = CHI\\) ===''\\);\n  const chk = await pool.query\\(''SELECT * FROM checklist WHERE chk_type = \\\\''CHI\\\\''''\\);\n  console.log\\(''Rows trovate:'', chk.rows.length\\);\n  chk.rows.forEach\\(r => console.log\\(JSON.stringify\\(r\\)\\)\\);\n\n  // 3. Verifica struttura checklist\n  const chkCols = await pool.query\\(\\\\`\n    SELECT column_name, data_type \n    FROM information_schema.columns \n    WHERE table_name = ''checklist''\n  \\\\`\\);\n  console.log\\(''\\\\n=== COLONNE CHECKLIST ===''\\);\n  chkCols.rows.forEach\\(r => console.log\\(r.column_name + '': '' + r.data_type\\)\\);\n\n  // 4. Verifica users\n  console.log\\(''\\\\n=== SAMPLE USERS ===''\\);\n  const users = await pool.query\\(''SELECT usr_id, usr_name, usr_def_place FROM users LIMIT 5''\\);\n  users.rows.forEach\\(r => console.log\\(JSON.stringify\\(r\\)\\)\\);\n\n  await pool.end\\(\\);\n}\ncheck\\(\\);\n\")",
+      "Bash(node -e \"\nconst { Pool } = require\\(''pg''\\);\nconst fs = require\\(''fs''\\);\nconst pool = new Pool\\({\n  host: ''57.129.5.234'',\n  port: 5432,\n  database: ''rfid_db'',\n  user: ''rfidmanager'',\n  password: ''iniAD16Z77oS'',\n}\\);\n\nasync function migrate\\(\\) {\n  try {\n    const sql = fs.readFileSync\\(''./src/db/add_inventory_fields.sql'', ''utf8''\\);\n    console.log\\(''Executing migration...''\\);\n    await pool.query\\(sql\\);\n    console.log\\(''Migration completed!''\\);\n    \n    // Verifica colonne\n    const result = await pool.query\\(\\\\`\n      SELECT column_name, data_type \n      FROM information_schema.columns \n      WHERE table_name = ''inventories'' \n      ORDER BY ordinal_position\n    \\\\`\\);\n    console.log\\(''\\\\nColonne inventories dopo migration:''\\);\n    result.rows.forEach\\(r => console.log\\(''  '' + r.column_name + '': '' + r.data_type\\)\\);\n    \n    await pool.end\\(\\);\n  } catch \\(err\\) {\n    console.error\\(''Error:'', err.message\\);\n    await pool.end\\(\\);\n  }\n}\nmigrate\\(\\);\n\")",
+      "Bash(node:*)",
+      "Bash(echo:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(dir \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\*.apk\")",
+      "Bash(psql:*)",
+      "Bash(find:*)"
     ]
   }
 }

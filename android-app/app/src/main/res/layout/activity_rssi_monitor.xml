@@ -195,8 +195,8 @@
         android:id="@+id/btnPlayPause"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:text="▶ START"
-        android:textSize="18sp"
+        android:text="▶"
+        android:textSize="24sp"
         android:textStyle="bold" />
 
 </LinearLayout>

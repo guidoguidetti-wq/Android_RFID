@@ -28,6 +28,9 @@ router.get('/:invId/count', inventoriesController.getItemsCount);
 // GET /api/inventories/:invId/stats - Ottieni statistiche inventario
 router.get('/:invId/stats', inventoriesController.getStats);
 
+// GET /api/inventories/:invId/expectations - Ottieni aspettative per Expected/Unexpected/Lost
+router.get('/:invId/expectations', inventoriesController.getExpectations);
+
 // POST /api/inventories - Crea nuovo inventario
 router.post('/', inventoriesController.create);
 

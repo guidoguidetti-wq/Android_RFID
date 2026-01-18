@@ -1,6 +1,9 @@
 package com.rfid.reader
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -186,12 +189,27 @@ class TagInfoAdapter(private val onItemClick: (InventoryItemDetail) -> Unit) :
         fun bind(item: InventoryItemDetail) {
             binding.tvProductId.text = item.product_id ?: "N/A"
             binding.tvEpc.text = "EPC: ${item.epc}"
-            
-            // Hide extra fields for info list to keep it clean
-            binding.tvFld01.visibility = View.GONE
-            binding.tvFld02.visibility = View.GONE
-            binding.tvFld03.visibility = View.GONE
-            binding.tvFldd01.visibility = View.GONE
+
+            // Show extra fields based on content
+            binding.tvFld01.text = item.fld01 ?: ""
+            binding.tvFld01.visibility = if (item.fld01.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            binding.tvFld02.text = item.fld02 ?: ""
+            binding.tvFld02.visibility = if (item.fld02.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            binding.tvFld03.text = item.fld03 ?: ""
+            binding.tvFld03.visibility = if (item.fld03.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            binding.tvFldd01.text = item.fldd01 ?: ""
+            binding.tvFldd01.visibility = if (item.fldd01.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            // Copy product_id to clipboard on click
+            binding.tvProductId.setOnClickListener {
+                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Product ID", item.product_id ?: "")
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(itemView.context, "Product ID copiato", Toast.LENGTH_SHORT).show()
+            }
 
             binding.root.setOnClickListener { onItemClick(item) }
         }

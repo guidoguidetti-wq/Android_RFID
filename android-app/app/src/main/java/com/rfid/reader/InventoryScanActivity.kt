@@ -29,6 +29,7 @@ class InventoryScanActivity : AppCompatActivity() {
     private var inventoryName: String = ""
     private var inventoryDate: String = ""
     private var existingCount: Int = 0
+    private var currentInventoryMode: String = "normal"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,6 +142,24 @@ class InventoryScanActivity : AppCompatActivity() {
             android.util.Log.d(TAG, "Total tags count: $count")
         }
 
+        // Contatore Expected (tag attesi trovati)
+        viewModel.expectedCount.observe(this) { count ->
+            binding.tvExpectedCount.text = count.toString()
+            android.util.Log.d(TAG, "Expected count: $count")
+        }
+
+        // Contatore Unexpected (tag non attesi)
+        viewModel.unexpectedCount.observe(this) { count ->
+            binding.tvUnexpectedCount.text = count.toString()
+            android.util.Log.d(TAG, "Unexpected count: $count")
+        }
+
+        // Contatore Lost (tag attesi non ancora trovati)
+        viewModel.lostCount.observe(this) { count ->
+            binding.tvLostCount.text = count.toString()
+            android.util.Log.d(TAG, "Lost count: $count")
+        }
+
         // Stato connessione reader
         viewModel.readerStatus.observe(this) { status ->
             binding.tvReaderStatus.text = status
@@ -170,6 +189,34 @@ class InventoryScanActivity : AppCompatActivity() {
             binding.tvConnectionStatus.visibility = if (isConnecting) View.VISIBLE else View.GONE
             android.util.Log.d(TAG, "Connection progress: $isConnecting")
         }
+
+        // Inventory mode
+        viewModel.inventoryModeLive.observe(this) { mode ->
+            currentInventoryMode = mode
+            updateModeDisplay(mode)
+            android.util.Log.d(TAG, "Inventory mode: $mode")
+        }
+
+        // Total Expected (for badge display)
+        viewModel.totalExpectedLive.observe(this) { totalExp ->
+            if (totalExp > 0 && currentInventoryMode != "normal") {
+                binding.tvExpectedTotal.text = "($totalExp)"
+                binding.tvExpectedTotal.visibility = View.VISIBLE
+            } else {
+                binding.tvExpectedTotal.visibility = View.GONE
+            }
+            android.util.Log.d(TAG, "Total expected: $totalExp")
+        }
+    }
+
+    private fun updateModeDisplay(mode: String) {
+        val (displayText, bgColor) = when (mode) {
+            "checklist" -> "Checklist" to "#4CAF50"  // Verde
+            "last_place" -> "Stock" to "#2196F3"     // Blu
+            else -> "Normal" to "#9E9E9E"            // Grigio
+        }
+        binding.tvInventoryMode.text = displayText
+        binding.llInventoryBadge.background.setTint(android.graphics.Color.parseColor(bgColor))
     }
 
     private fun setupListeners() {
@@ -189,10 +236,11 @@ class InventoryScanActivity : AppCompatActivity() {
         }
 
         binding.btnInfo.setOnClickListener {
-            android.util.Log.d(TAG, "Opening details for inventory $inventoryId")
+            android.util.Log.d(TAG, "Opening details for inventory $inventoryId (mode: $currentInventoryMode)")
             val intent = Intent(this, InventoryDetailsActivity::class.java)
             intent.putExtra("INVENTORY_ID", inventoryId)
             intent.putExtra("INVENTORY_NAME", inventoryName)
+            intent.putExtra("INVENTORY_MODE", currentInventoryMode)
             startActivity(intent)
         }
 

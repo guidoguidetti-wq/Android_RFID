@@ -1,68 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="4dp"
     app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="12dp">
 
-        <!-- Product ID -->
-        <TextView
-            android:id="@+id/tvProductId"
-            android:layout_width="wrap_content"
+        <!-- Product ID + fldd01 on same row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="PROD-123"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#2196F3"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <!-- Fields fld01, fld02, fld03 -->
-        <TextView
-            android:id="@+id/tvFld01"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="fld01: Value"
-            android:textSize="14sp"
-            android:textColor="#000000"
-            android:layout_marginTop="8dp" />
+            <TextView
+                android:id="@+id/tvProductId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PROD-123"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#2196F3"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true" />
 
-        <TextView
-            android:id="@+id/tvFld02"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="fld02: Value"
-            android:textSize="14sp"
-            android:textColor="#000000"
-            android:layout_marginTop="4dp" />
+            <TextView
+                android:id="@+id/tvFldd01"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Description"
+                android:textSize="13sp"
+                android:textColor="#4CAF50"
+                android:gravity="end"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvFld03"
-            android:layout_width="wrap_content"
+        <!-- Fields fld01, fld02, fld03 in a row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="fld03: Value"
-            android:textSize="14sp"
-            android:textColor="#000000"
-            android:layout_marginTop="4dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
 
-        <!-- fldd01 -->
-        <TextView
-            android:id="@+id/tvFldd01"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Description"
-            android:textSize="15sp"
-            android:textColor="#4CAF50"
-            android:layout_marginTop="8dp" />
+            <TextView
+                android:id="@+id/tvFld01"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="fld01"
+                android:textSize="13sp"
+                android:textColor="#000000"
+                android:ellipsize="end"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/tvFld02"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="fld02"
+                android:textSize="13sp"
+                android:textColor="#000000"
+                android:gravity="center"
+                android:ellipsize="end"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/tvFld03"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="fld03"
+                android:textSize="13sp"
+                android:textColor="#000000"
+                android:gravity="end"
+                android:ellipsize="end"
+                android:maxLines="1" />
+        </LinearLayout>
 
         <!-- EPC -->
         <TextView
@@ -70,9 +97,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="EPC: 3008..."
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textColor="#999999"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:fontFamily="monospace" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>

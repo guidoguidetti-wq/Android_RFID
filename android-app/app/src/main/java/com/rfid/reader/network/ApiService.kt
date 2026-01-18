@@ -89,7 +89,8 @@ data class ProductResponse(
     val fld02: String?,
     val fld03: String?,
     val fld04: String?,
-    val fld05: String?
+    val fld05: String?,
+    val fldd01: String?
 )
 
 data class ProductLabelResponse(
@@ -161,14 +162,38 @@ data class ScanToInventoryRequest(
     val mode: String? = null,
     val placeId: String? = null,
     val zoneId: String? = null,
-    val productFilters: Map<String, String>? = null
+    val productFilters: Map<String, String>? = null,
+    val status: String? = null  // "expected" o "unexpected"
+)
+
+data class InventoryCounters(
+    val expectedCount: Int,
+    val unexpectedCount: Int,
+    val lostCount: Int
 )
 
 data class ScanToInventoryResponse(
     val success: Boolean,
     val item: InventoryItemResponse?,
     val totalCount: Int,
-    val isNew: Boolean
+    val isNew: Boolean,
+    val epc: String?,
+    val productId: String?,
+    val status: String?,
+    val counters: InventoryCounters?
+)
+
+// Inventory Expectations Models (per logica Expected/Unexpected/Lost)
+data class ChecklistProductInfo(
+    val ckp_product_id: String,
+    val ckp_qta: Int
+)
+
+data class InventoryExpectationsResponse(
+    val mode: String,                           // "normal", "checklist", "last_place"
+    val totalExpected: Int,
+    val expectedItems: List<String>,            // Per last-place mode: lista di EPCs
+    val checklistProducts: List<ChecklistProductInfo>  // Per checklist mode
 )
 
 data class InventoryItemDetail(
@@ -177,7 +202,10 @@ data class InventoryItemDetail(
     val fld01: String?,
     val fld02: String?,
     val fld03: String?,
-    val fldd01: String?
+    val fldd01: String?,
+    val inv_expected: Boolean? = null,
+    val inv_unexpected: Boolean? = null,
+    val inv_lost: Boolean? = null
 )
 
 data class ItemHistoryResponse(
@@ -188,7 +216,10 @@ data class ItemHistoryResponse(
     val mov_dest_zone: String?,
     val place_name: String?,
     val zone_name: String?,
-    val reference_desc: String?
+    val reference_desc: String?,
+    val mov_user: String?,
+    val mov_ref: String?,
+    val mov_notes: String?
 )
 
 data class CreateInventoryRequest(
@@ -267,6 +298,9 @@ interface ApiService {
 
     @GET("api/inventories/{invId}/stats")
     suspend fun getInventoryStats(@Path("invId") invId: Int): Response<Map<String, Any>>
+
+    @GET("api/inventories/{invId}/expectations")
+    suspend fun getInventoryExpectations(@Path("invId") invId: Int): Response<InventoryExpectationsResponse>
 
     @POST("api/inventories/{invId}/scan")
     suspend fun addScanToInventory(

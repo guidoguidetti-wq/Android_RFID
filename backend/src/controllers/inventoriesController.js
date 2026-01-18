@@ -1,6 +1,7 @@
 const Inventory = require('../models/Inventory');
 const InventoryItem = require('../models/InventoryItem');
 const Item = require('../models/Item');
+const ChecklistProduct = require('../models/ChecklistProduct');
 const pool = require('../db/config');
 
 /**
@@ -94,6 +95,7 @@ exports.getItemsCount = async (req, res) => {
 /**
  * GET /api/inventories/:invId/items-details
  * Ottieni items con dettagli prodotto (3-table JOIN)
+ * Include status expected/unexpected per filtri e colorazione
  */
 exports.getItemsWithDetails = async (req, res) => {
   try {
@@ -102,6 +104,9 @@ exports.getItemsWithDetails = async (req, res) => {
     const result = await pool.query(
       `SELECT
          ii.int_epc as epc,
+         ii.inv_expected,
+         ii.inv_unexpected,
+         ii.inv_lost,
          i.item_product_id as product_id,
          p.fld01,
          p.fld02,
@@ -310,11 +315,13 @@ exports.update = async (req, res) => {
 /**
  * POST /api/inventories/:invId/scan
  * Aggiungi un tag scannerizzato a un inventario
+ * Restituisce anche productId per la classificazione Expected/Unexpected
+ * Calcola automaticamente lo status (expected/unexpected) in base alla modalità inventario
  */
 exports.addScan = async (req, res) => {
   try {
     const { invId } = req.params;
-    const { epc, mode, placeId, zoneId, productFilters } = req.body;
+    const { epc, mode, placeId, zoneId, productFilters, status: clientStatus } = req.body;
 
     // Validazione
     if (!epc) {
@@ -327,6 +334,8 @@ exports.addScan = async (req, res) => {
 
     let shouldAddToInventory = true;
     let item = null;
+    let productId = null;
+    let calculatedStatus = clientStatus || null;
 
     // Mode-based processing
     if (mode === 'mode_a') {
@@ -353,19 +362,113 @@ exports.addScan = async (req, res) => {
     }
     // mode_c: nessun controllo, comportamento attuale
 
-    // Aggiungi a inventory_items solo se necessario
+    // Recupera productId dall'item (per classificazione Expected/Unexpected)
+    const itemData = await Item.findByEpc(epc);
+    if (itemData) {
+      productId = itemData.item_product_id || null;
+    }
+
+    // Se status non fornito dal client, calcolalo in base alla modalità inventario
+    if (!calculatedStatus && shouldAddToInventory) {
+      const inventory = await Inventory.findById(invId);
+
+      if (inventory) {
+        // Modalità Checklist
+        if (inventory.inv_chk_id && inventory.inv_chk_id !== 0) {
+          if (productId) {
+            // Verifica se il prodotto è nella checklist
+            const checklistProduct = await ChecklistProduct.findProductInChecklist(inventory.inv_chk_id, productId);
+            if (checklistProduct && checklistProduct.ckp_qta > 0) {
+              // Conta quanti EPC di questo prodotto sono già nell'inventario
+              const existingCount = await pool.query(
+                `SELECT COUNT(*) as cnt FROM "inventory_items" ii
+                 JOIN "Items" i ON ii.int_epc = i.item_id
+                 WHERE ii.int_inv_id = $1 AND i.item_product_id = $2`,
+                [invId, productId]
+              );
+              const currentCount = parseInt(existingCount.rows[0].cnt) || 0;
+
+              if (currentCount < checklistProduct.ckp_qta) {
+                calculatedStatus = 'expected';
+              } else {
+                calculatedStatus = 'unexpected';
+              }
+            } else {
+              calculatedStatus = 'unexpected';
+            }
+          } else {
+            calculatedStatus = 'unexpected';
+          }
+        }
+        // Modalità Last-Place
+        else if (inventory.inv_last === true) {
+          const lastPlace = inventory.inv_last_place;
+          // Zone possono essere separate da ; o ,
+          const lastZones = inventory.inv_last_zones
+            ? inventory.inv_last_zones.split(/[;,]/).map(z => z.trim()).filter(z => z.length > 0)
+            : [];
+
+          // Verifica se l'EPC era atteso in base a place_last e zone_last
+          let query = `SELECT 1 FROM "Items" WHERE item_id = $1 AND place_last = $2`;
+          const params = [epc, lastPlace];
+
+          if (lastZones.length > 0) {
+            query += ` AND zone_last = ANY($3)`;
+            params.push(lastZones);
+          }
+
+          const expectedResult = await pool.query(query, params);
+          calculatedStatus = expectedResult.rows.length > 0 ? 'expected' : 'unexpected';
+        }
+        // Modalità normale: nessuno status
+      }
+    }
+
+    console.log(`Status for EPC ${epc}: ${calculatedStatus || 'none'}`);
+
+    // Aggiungi a inventory_items solo se necessario (con status)
     if (shouldAddToInventory) {
-      item = await InventoryItem.addItem(invId, epc);
+      item = await InventoryItem.addItem(invId, epc, calculatedStatus);
     }
 
     // Ottieni conteggio totale aggiornato
     const count = await InventoryItem.getCountByInventory(invId);
 
+    // Calcola contatori Expected/Unexpected/Lost aggiornati
+    const countersResult = await pool.query(
+      `SELECT
+        COUNT(CASE WHEN inv_expected = true THEN 1 END) as expected_count,
+        COUNT(CASE WHEN inv_unexpected = true THEN 1 END) as unexpected_count,
+        COUNT(CASE WHEN inv_lost = true THEN 1 END) as lost_count
+       FROM "inventory_items"
+       WHERE int_inv_id = $1`,
+      [invId]
+    );
+
+    const counters = {
+      expectedCount: parseInt(countersResult.rows[0].expected_count) || 0,
+      unexpectedCount: parseInt(countersResult.rows[0].unexpected_count) || 0,
+      lostCount: parseInt(countersResult.rows[0].lost_count) || 0
+    };
+
+    // Per checklist mode: calcola lost come totalExpected - expectedCount
+    const inventory = await Inventory.findById(invId);
+    if (inventory && inventory.inv_chk_id && inventory.inv_chk_id !== 0) {
+      // Ottieni totalExpected dalla checklist
+      const checklistProducts = await ChecklistProduct.getByChecklistId(inventory.inv_chk_id);
+      const totalExpected = checklistProducts.reduce((sum, p) => sum + (parseInt(p.ckp_qta) || 0), 0);
+      counters.lostCount = Math.max(0, totalExpected - counters.expectedCount);
+    }
+
     res.json({
       success: true,
       item,
       totalCount: count,
-      isNew: !!item
+      isNew: !!item,
+      epc: epc,
+      productId: productId,
+      status: calculatedStatus,
+      counters: counters  // NUOVO: contatori aggiornati
     });
   } catch (error) {
     console.error('Error adding scan:', error);
@@ -483,6 +586,120 @@ exports.getAll = async (req, res) => {
     console.error('Error fetching inventories:', error);
     res.status(500).json({
       error: 'Failed to fetch inventories',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * GET /api/inventories/:invId/expectations
+ * Ottieni le aspettative per un inventario (per logica Expected/Unexpected/Lost)
+ * Restituisce diverse info in base alla modalità dell'inventario:
+ * - checklist: prodotti della checklist con quantità
+ * - last_place: lista di EPCs attesi basata su place_last/zone_last
+ * - normal: nessuna aspettativa
+ */
+exports.getExpectations = async (req, res) => {
+  try {
+    const { invId } = req.params;
+
+    console.log(`Fetching expectations for inventory ${invId}`);
+
+    // Recupera dettagli inventario
+    const inventory = await Inventory.findById(invId);
+    if (!inventory) {
+      return res.status(404).json({ error: 'Inventory not found' });
+    }
+
+    const result = {
+      mode: 'normal',
+      totalExpected: 0,
+      expectedItems: [],        // Per last-place mode: lista di EPCs
+      checklistProducts: []     // Per checklist mode: product_id -> qty
+    };
+
+    // Mode 1: Checklist-based (inv_chk_id != 0)
+    if (inventory.inv_chk_id && inventory.inv_chk_id !== 0) {
+      result.mode = 'checklist';
+
+      const products = await ChecklistProduct.getByChecklistId(inventory.inv_chk_id);
+      result.checklistProducts = products;
+      result.totalExpected = products.reduce((sum, p) => sum + (parseInt(p.ckp_qta) || 0), 0);
+
+      console.log(`Checklist mode: ${products.length} products, total expected: ${result.totalExpected}`);
+    }
+    // Mode 2: Last-place based (inv_last = true)
+    else if (inventory.inv_last === true) {
+      result.mode = 'last_place';
+
+      const lastPlace = inventory.inv_last_place;
+      // Zone possono essere separate da ; o ,
+      const lastZones = inventory.inv_last_zones
+        ? inventory.inv_last_zones.split(/[;,]/).map(z => z.trim()).filter(z => z.length > 0)
+        : [];
+
+      console.log(`Last-place mode: place=${lastPlace}, zones=${lastZones.join(',')}, raw zones='${inventory.inv_last_zones}'`);
+
+      // Query per ottenere EPCs attesi
+      let query = `SELECT item_id FROM "Items" WHERE place_last = $1`;
+      const params = [lastPlace];
+
+      if (lastZones.length > 0) {
+        query += ` AND zone_last = ANY($2)`;
+        params.push(lastZones);
+      }
+
+      console.log(`Executing query: ${query} with params:`, params);
+
+      const itemsResult = await pool.query(query, params);
+      result.expectedItems = itemsResult.rows.map(r => r.item_id);
+      result.totalExpected = result.expectedItems.length;
+
+      console.log(`Found ${result.totalExpected} expected items in place ${lastPlace} with zones [${lastZones.join(',')}]`);
+
+      // ✅ Pre-popola inventory_items con gli EPCs attesi come "lost"
+      // Questo permette di vedere i lost nella pagina Details
+      if (result.expectedItems.length > 0) {
+        console.log(`Pre-populating lost items for Stock inventory ${invId}...`);
+
+        // Prima verifica quanti items esistono già
+        const existingResult = await pool.query(
+          `SELECT int_epc FROM "inventory_items" WHERE int_inv_id = $1`,
+          [invId]
+        );
+        const existingEpcs = new Set(existingResult.rows.map(r => r.int_epc));
+        console.log(`Found ${existingEpcs.size} existing items in inventory`);
+
+        // Inserisci solo gli EPC attesi che non esistono già
+        let insertedCount = 0;
+        for (const epc of result.expectedItems) {
+          if (!existingEpcs.has(epc)) {
+            try {
+              await pool.query(
+                `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+                 VALUES ($1, $2, true, false, false)`,
+                [invId, epc]
+              );
+              insertedCount++;
+            } catch (e) {
+              console.warn(`Could not insert lost item ${epc}:`, e.message);
+            }
+          }
+        }
+
+        console.log(`Pre-populated ${insertedCount} new lost items`);
+      }
+    }
+    // Mode 3: Normal - no expectations
+    else {
+      console.log('Normal mode: no expectations');
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting expectations:', error);
+    res.status(500).json({
+      error: 'Failed to get expectations',
       details: error.message
     });
   }

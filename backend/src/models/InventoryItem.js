@@ -5,9 +5,10 @@ class InventoryItem {
    * Aggiungi un item scannerizzato a un inventario
    * @param {number} inventoryId - Inventory ID (integer)
    * @param {string} epc - EPC del tag scannerizzato
+   * @param {string|null} status - Status classificazione: 'expected', 'unexpected', o null
    * @returns {Promise<Object|null>} Item aggiunto o null se già esistente
    */
-  static async addItem(inventoryId, epc) {
+  static async addItem(inventoryId, epc, status = null) {
     try {
       // Check if already exists
       const checkResult = await pool.query(
@@ -15,20 +16,40 @@ class InventoryItem {
         [inventoryId, epc]
       );
 
+      // Determina valori booleani per status
+      const invExpected = status === 'expected';
+      const invUnexpected = status === 'unexpected';
+
       if (checkResult.rows.length > 0) {
-        console.log(`Item EPC '${epc}' already exists in inventory '${inventoryId}' - skipped`);
+        const existingItem = checkResult.rows[0];
+
+        // Se l'item era "lost" (pre-popolato per Stock mode), aggiornalo con lo status di scansione
+        if (existingItem.inv_lost === true) {
+          const updateResult = await pool.query(
+            `UPDATE "inventory_items"
+             SET inv_lost = false, inv_expected = $3, inv_unexpected = $4
+             WHERE int_inv_id = $1 AND int_epc = $2
+             RETURNING *`,
+            [inventoryId, epc, invExpected, invUnexpected]
+          );
+          console.log(`Item EPC '${epc}' updated from lost to scanned (status: ${status || 'none'})`);
+          return updateResult.rows[0];
+        }
+
+        // Già scansionato - skip
+        console.log(`Item EPC '${epc}' already scanned in inventory '${inventoryId}' - skipped`);
         return null;
       }
 
-      // Insert new item
+      // Insert new item con status
       const result = await pool.query(
-        `INSERT INTO "inventory_items" (int_inv_id, int_epc)
-         VALUES ($1, $2)
+        `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_expected, inv_unexpected, inv_lost)
+         VALUES ($1, $2, $3, $4, false)
          RETURNING *`,
-        [inventoryId, epc]
+        [inventoryId, epc, invExpected, invUnexpected]
       );
 
-      console.log(`Item EPC '${epc}' added to inventory '${inventoryId}'`);
+      console.log(`Item EPC '${epc}' added to inventory '${inventoryId}' (status: ${status || 'none'})`);
       return result.rows[0];
     } catch (error) {
       console.error('Error adding item to inventory:', error);
@@ -59,13 +80,14 @@ class InventoryItem {
   }
 
   /**
-   * Conta gli items in un inventario
+   * Conta gli items in un inventario (esclude items lost/pre-popolati)
    * @param {number} inventoryId - Inventory ID (integer)
-   * @returns {Promise<number>} Conteggio items
+   * @returns {Promise<number>} Conteggio items scansionati (non lost)
    */
   static async getCountByInventory(inventoryId) {
     const result = await pool.query(
-      'SELECT COUNT(*) as count FROM "inventory_items" WHERE int_inv_id = $1',
+      `SELECT COUNT(*) as count FROM "inventory_items"
+       WHERE int_inv_id = $1 AND (inv_lost = false OR inv_lost IS NULL)`,
       [inventoryId]
     );
     return parseInt(result.rows[0].count);
