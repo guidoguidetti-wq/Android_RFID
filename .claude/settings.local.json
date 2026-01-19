@@ -78,7 +78,8 @@
       "Bash(dir \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\*.apk\")",
       "Bash(psql:*)",
       "Bash(find:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(dir:*)"
     ]
   }
 }
