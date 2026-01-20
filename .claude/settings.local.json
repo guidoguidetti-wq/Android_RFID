@@ -79,7 +79,8 @@
       "Bash(psql:*)",
       "Bash(find:*)",
       "Bash(git push:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(if exist apiindex.js del apiindex.js)"
     ]
   }
 }

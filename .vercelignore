@@ -1,0 +1,10 @@
+android-app/
+docs/
+.git/
+*.md
+docker-compose.yml
+CLAUDE.md
+backend/node_modules
+backend/.env
+backend/.env.local
+backend/*.log

@@ -146,9 +146,44 @@ curl http://localhost:3000/api/zones
 curl http://localhost:3000/api/items
 ```
 
+## Production Deployment (Vercel)
+
+Il backend è deployato su Vercel come funzione serverless.
+
+**Production URL**: https://android-rfid.vercel.app
+
+### Quick Deploy
+
+```bash
+cd backend
+vercel --prod
+```
+
+### Configurazione Richiesta
+
+Nel **Vercel Dashboard**:
+1. **Root Directory**: `backend`
+2. **Environment Variables**: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CORS_ORIGIN, NODE_ENV
+
+Vedi [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) per guida completa.
+
+### Test Production
+
+```bash
+# Health check
+curl https://android-rfid.vercel.app/health
+
+# API docs
+curl https://android-rfid.vercel.app/api
+
+# Places
+curl https://android-rfid.vercel.app/api/places
+```
+
 ## Notes
 
 - Database è remoto e condiviso - non fare modifiche allo schema
-- CORS configurato per `*` (modificare in production)
+- CORS configurato per `*` (modificare in production per domini specifici)
 - Logging attivo in dev mode (Morgan)
-- Porta 3000 deve essere accessibile da device Android
+- Porta 3000 deve essere accessibile da device Android (solo in sviluppo locale)
+- Production usa Vercel serverless functions con timeout 10s

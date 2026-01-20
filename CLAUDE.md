@@ -61,6 +61,123 @@ cd android-app
 
 **IMPORTANTE**: Prima del build, scaricare `RFIDAPI3.aar` da Zebra Support Portal e posizionarlo in `android-app/app/libs/`
 
+## Vercel Deployment (Production Backend)
+
+Il backend è deployato su Vercel come funzione serverless.
+
+**URL Production**: https://android-rfid.vercel.app
+
+### Struttura Deployment
+
+```
+Android_RFID/
+├── vercel.json.backup        ← Backup, NON usato
+├── .vercelignore             ← Esclude android-app, docs, node_modules
+└── backend/                  ← ROOT DIRECTORY per Vercel
+    ├── vercel.json           ← Configurazione rewrites
+    ├── package.json          ← Dipendenze Node.js
+    ├── .env                  ← Locale (non committato)
+    ├── .env.example          ← Template variabili ambiente
+    ├── api/
+    │   └── index.js          ← Serverless function entry point
+    └── src/
+        └── server.js         ← Express app
+```
+
+### Configurazione Vercel Dashboard
+
+**IMPORTANTE**: Nel dashboard Vercel configurare:
+- **Root Directory**: `backend` (Settings → General → Root Directory)
+- **Environment Variables** (Settings → Environment Variables):
+  - `DB_HOST` = `57.129.5.234`
+  - `DB_PORT` = `5432`
+  - `DB_NAME` = `rfid_db`
+  - `DB_USER` = `rfidmanager`
+  - `DB_PASSWORD` = `iniAD16Z77oS`
+  - `CORS_ORIGIN` = `*`
+  - `NODE_ENV` = `production`
+  - `READER_ID` = `RFD8500-DEFAULT`
+
+### File Chiave
+
+**backend/vercel.json**:
+```json
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
+}
+```
+
+**backend/api/index.js**:
+```javascript
+// Serverless function handler - carica Express app
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const app = require(path.join(__dirname, '../src/server'));
+module.exports = app;
+```
+
+### Deploy Commands
+
+```bash
+# Deploy dalla cartella backend
+cd backend
+vercel --prod
+
+# Deploy con Git (se integrato)
+git add .
+git commit -m "Update backend"
+git push  # Vercel auto-deploys
+```
+
+### Test Endpoints Production
+
+```bash
+# Health check
+curl https://android-rfid.vercel.app/health
+
+# API documentation
+curl https://android-rfid.vercel.app/api
+
+# Places list
+curl https://android-rfid.vercel.app/api/places
+```
+
+### Vercel Logs
+
+```bash
+# View logs in real-time
+vercel logs
+
+# Or via Dashboard: Deployments → Select deployment → Function Logs
+```
+
+### Troubleshooting Vercel
+
+1. **404 su tutti gli endpoint**:
+   - Verifica Root Directory = `backend` nel dashboard
+   - Verifica che `backend/api/index.js` esista
+   - Controlla che `backend/vercel.json` abbia il rewrite corretto
+
+2. **500 Internal Server Error**:
+   - Controlla Environment Variables nel dashboard
+   - Verifica logs: `vercel logs` o Dashboard → Function Logs
+   - Testa connessione database (controlla firewall IP Vercel)
+
+3. **Module not found errors**:
+   - Verifica che tutte le dipendenze siano in `backend/package.json`
+   - Controlla che i path in `api/index.js` usino `path.join(__dirname, ...)`
+
+4. **No function logs visibili**:
+   - Significa che la funzione non viene eseguita
+   - Verifica che Root Directory sia configurato correttamente
+   - Ricontrolla la struttura dei file (api/index.js deve esistere)
+
 ## Database Schema (ESISTENTE - NON MODIFICARE)
 
 **Host**: 57.129.5.234:5432

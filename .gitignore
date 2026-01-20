@@ -25,3 +25,6 @@ android-app/app/libs/RFIDAPI3.aar
 # OS
 .DS_Store
 Thumbs.db
+
+.vercel
+vercel.json.backup
