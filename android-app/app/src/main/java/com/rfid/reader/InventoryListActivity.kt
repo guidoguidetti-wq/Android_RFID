@@ -66,9 +66,26 @@ class InventoryListActivity : AppCompatActivity() {
             progressDialog.setCancelable(false)
             progressDialog.show()
 
-            // Naviga alla pagina scan
-            android.util.Log.d(TAG, "Opening inventory: ${inventory.inv_id}")
-            val intent = Intent(this, InventoryScanActivity::class.java)
+            // ✅ NUOVO: Determina modalità inventario e apri Activity corretta
+            val isChecklistMode = inventory.inv_chk_id != null && inventory.inv_chk_id != 0
+            val isStockMode = inventory.inv_last == true
+
+            val activityClass = when {
+                isChecklistMode -> {
+                    android.util.Log.d(TAG, "Opening CHECKLIST inventory: ${inventory.inv_id}")
+                    InventoryScanChecklistActivity::class.java
+                }
+                isStockMode -> {
+                    android.util.Log.d(TAG, "Opening STOCK inventory: ${inventory.inv_id}")
+                    InventoryScanStockActivity::class.java
+                }
+                else -> {
+                    android.util.Log.d(TAG, "Opening NORMAL inventory: ${inventory.inv_id}")
+                    InventoryScanNormalActivity::class.java
+                }
+            }
+
+            val intent = Intent(this, activityClass)
             intent.putExtra("INVENTORY_ID", inventory.inv_id)
             intent.putExtra("INVENTORY_NAME", inventory.inv_name)
             intent.putExtra("INVENTORY_START_DATE", inventory.inv_start_date)

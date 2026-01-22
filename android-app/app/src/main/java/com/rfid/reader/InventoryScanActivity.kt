@@ -217,6 +217,46 @@ class InventoryScanActivity : AppCompatActivity() {
         }
         binding.tvInventoryMode.text = displayText
         binding.llInventoryBadge.background.setTint(android.graphics.Color.parseColor(bgColor))
+
+        // ✅ NUOVA LOGICA: Mostra/nascondi counter in base alla modalità
+        when (mode) {
+            "normal" -> {
+                // NORMAL MODE: Solo counter principale e "Validated"
+                // Nascondi Unexpected e Lost
+                hideCounter(binding.llUnexpectedCounter)
+                hideCounter(binding.llLostCounter)
+                // Rinomina "Expected" in "Validated"
+                binding.tvExpectedLabel.text = "Validated"
+                binding.tvExpectedLabel.setTextColor(getColor(android.R.color.black))
+                showCounter(binding.llExpectedCounter)
+            }
+            "checklist" -> {
+                // CHECKLIST MODE: Mostra tutti i counter
+                showCounter(binding.llExpectedCounter)
+                showCounter(binding.llUnexpectedCounter)
+                showCounter(binding.llLostCounter)
+                // Ripristina label "Expected"
+                binding.tvExpectedLabel.text = "Expected"
+                binding.tvExpectedLabel.setTextColor(android.graphics.Color.parseColor("#666666"))
+            }
+            "last_place" -> {
+                // STOCK MODE: Mostra tutti i counter
+                showCounter(binding.llExpectedCounter)
+                showCounter(binding.llUnexpectedCounter)
+                showCounter(binding.llLostCounter)
+                // Ripristina label "Expected"
+                binding.tvExpectedLabel.text = "Expected"
+                binding.tvExpectedLabel.setTextColor(android.graphics.Color.parseColor("#666666"))
+            }
+        }
+    }
+
+    private fun hideCounter(view: View) {
+        view.visibility = View.GONE
+    }
+
+    private fun showCounter(view: View) {
+        view.visibility = View.VISIBLE
     }
 
     private fun setupListeners() {

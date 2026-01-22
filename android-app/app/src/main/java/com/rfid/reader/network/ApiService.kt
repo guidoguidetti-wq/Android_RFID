@@ -132,7 +132,9 @@ data class InventoryResponse(
     val inv_state: String,
     val inv_place_id: String,
     val inv_start_date: String,
-    val items_count: Int
+    val items_count: Int,
+    val inv_chk_id: Int? = 0,  // Per determinare modalità Checklist
+    val inv_last: Boolean? = false  // Per determinare modalità Stock
 )
 
 data class InventoryDetailResponse(
@@ -206,6 +208,18 @@ data class InventoryItemDetail(
     val inv_expected: Boolean? = null,
     val inv_unexpected: Boolean? = null,
     val inv_lost: Boolean? = null
+)
+
+data class InventoryCountersResponse(
+    val total_count: Int,       // Totale di tutti i tag in inventory_items
+    val expected_count: Int,
+    val unexpected_count: Int,
+    val lost_count: Int
+)
+
+data class InventoryEpcItem(
+    val int_epc: String,
+    val inv_lost: Boolean
 )
 
 data class ItemHistoryResponse(
@@ -298,6 +312,12 @@ interface ApiService {
 
     @GET("api/inventories/{invId}/stats")
     suspend fun getInventoryStats(@Path("invId") invId: Int): Response<Map<String, Any>>
+
+    @GET("api/inventories/{invId}/counters")
+    suspend fun getInventoryCounters(@Path("invId") invId: Int): Response<InventoryCountersResponse>
+
+    @GET("api/inventories/{invId}/epcs")
+    suspend fun getInventoryEpcs(@Path("invId") invId: Int): Response<List<InventoryEpcItem>>
 
     @GET("api/inventories/{invId}/expectations")
     suspend fun getInventoryExpectations(@Path("invId") invId: Int): Response<InventoryExpectationsResponse>

@@ -80,7 +80,10 @@
       "Bash(find:*)",
       "Bash(git push:*)",
       "Bash(dir:*)",
-      "Bash(if exist apiindex.js del apiindex.js)"
+      "Bash(if exist apiindex.js del apiindex.js)",
+      "Bash(PGPASSWORD='iniAD16Z77oS' psql -h 57.129.5.234 -p 5432 -U rfidmanager -d rfid_db -c \"SELECT \n  COUNT\\(*\\) as total,\n  COUNT\\(CASE WHEN inv_expected = true THEN 1 END\\) as expected,\n  COUNT\\(CASE WHEN inv_unexpected = true THEN 1 END\\) as unexpected,\n  COUNT\\(CASE WHEN inv_lost = true THEN 1 END\\) as lost\nFROM inventory_items \nWHERE int_inv_id = 12;\")",
+      "Bash(taskkill:*)",
+      "Bash(test:*)"
     ]
   }
 }

@@ -68,9 +68,31 @@
             android:label="Nuovo Inventario"
             android:parentActivityName=".InventoryListActivity" />
 
-        <!-- Inventory Scan (ex MainActivity) -->
+        <!-- Inventory Scan (ex MainActivity) - OLD, da deprecare -->
         <activity
             android:name=".InventoryScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+
+        <!-- ✅ NUOVE ACTIVITY: Tre modalità separate -->
+        <!-- Inventory Scan - NORMAL Mode -->
+        <activity
+            android:name=".InventoryScanNormalActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+
+        <!-- Inventory Scan - CHECKLIST Mode -->
+        <activity
+            android:name=".InventoryScanChecklistActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+
+        <!-- Inventory Scan - STOCK Mode (Last-Place) -->
+        <activity
+            android:name=".InventoryScanStockActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:keepScreenOn="true" />

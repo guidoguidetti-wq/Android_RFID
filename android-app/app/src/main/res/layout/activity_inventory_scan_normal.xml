@@ -27,7 +27,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Inventory"
+            android:text="Inventory - Normal"
             android:textColor="#FFFFFF"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -70,39 +70,30 @@
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:text="Test Pic 1"
+                android:text="Inventory Normal"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="#000000" />
 
-            <!-- Inventory Mode Badge with Expected Count -->
+            <!-- Badge Normal (Grigio) -->
             <LinearLayout
                 android:id="@+id/llInventoryBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/badge_background"
+                android:backgroundTint="#9E9E9E"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:gravity="center">
 
                 <TextView
-                    android:id="@+id/tvInventoryMode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Normal"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="#FFFFFF" />
-
-                <TextView
-                    android:id="@+id/tvExpectedTotal"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="(8)"
-                    android:textSize="10sp"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
@@ -135,93 +126,30 @@
             android:gravity="center"
             android:paddingHorizontal="16dp" />
 
-        <!-- Sub-counters: Expected / Unexpected / Lost -->
+        <!-- Solo Validated Counter -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:paddingHorizontal="24dp">
+            android:layout_marginTop="16dp">
 
-            <!-- Expected Counter (Verde) - Mostra come "Validated" in Normal mode -->
-            <LinearLayout
-                android:id="@+id/llExpectedCounter"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            <TextView
+                android:id="@+id/tvValidatedCount"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center">
+                android:text="0"
+                android:textSize="40sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
 
-                <TextView
-                    android:id="@+id/tvExpectedCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:textColor="#4CAF50" />
-
-                <TextView
-                    android:id="@+id/tvExpectedLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Expected"
-                    android:textSize="12sp"
-                    android:textColor="#666666" />
-            </LinearLayout>
-
-            <!-- Unexpected Counter (Arancione) -->
-            <LinearLayout
-                android:id="@+id/llUnexpectedCounter"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:id="@+id/tvUnexpectedCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:textColor="#FF9800" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Unexpected"
-                    android:textSize="12sp"
-                    android:textColor="#666666" />
-            </LinearLayout>
-
-            <!-- Lost Counter (Rosso) -->
-            <LinearLayout
-                android:id="@+id/llLostCounter"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:id="@+id/tvLostCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:textColor="#F44336" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Lost"
-                    android:textSize="12sp"
-                    android:textColor="#666666" />
-            </LinearLayout>
+                android:text="Validated"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
         </LinearLayout>
     </LinearLayout>
 
@@ -303,7 +231,7 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:minHeight="56dp"
-            android:text="CLOSE INV"
+            android:text="CLOSE"
             android:textSize="10sp"
             android:background="@drawable/button_border"
             app:backgroundTint="@null"
@@ -319,68 +247,69 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:minHeight="56dp"
-            android:text="DELETE INV"
+            android:text="DELETE"
             android:textSize="10sp"
             android:background="@drawable/button_border"
             app:backgroundTint="@null"
-            android:textColor="#D32F2F"
+            android:textColor="#F44336"
             android:drawableTop="@drawable/ic_delete"
             android:drawablePadding="2dp"
             android:padding="4dp"
             android:layout_marginStart="4dp" />
     </LinearLayout>
 
-    <!-- Play/Pause button (cerchio verde lime) -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:padding="8dp">
-
-        <Button
-            android:id="@+id/btnPlayPause"
-            android:layout_width="70dp"
-            android:layout_height="70dp"
-            android:text="▶"
-            android:textSize="28sp"
-            android:backgroundTint="#CCFF00"
-            android:textColor="#000000"
-            android:layout_gravity="center" />
-    </FrameLayout>
-
-    <!-- Connection Progress Indicator -->
+    <!-- Footer con connessione e play/pause -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="8dp">
+        android:background="#000000"
+        android:padding="12dp"
+        android:gravity="center_vertical">
 
-        <ProgressBar
-            android:id="@+id/progressConnection"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/tvConnectionStatus"
-            android:layout_width="wrap_content"
+        <!-- Status connessione -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Connecting..."
-            android:textSize="12sp"
-            android:textColor="#FF9800"
-            android:layout_marginStart="8dp"
-            android:visibility="gone" />
-    </LinearLayout>
+            android:orientation="vertical">
 
-    <!-- Status reader -->
-    <TextView
-        android:id="@+id/tvReaderStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Reader Disconnected"
-        android:textSize="14sp"
-        android:textColor="#F44336"
-        android:layout_gravity="center"
-        android:padding="8dp" />
+            <TextView
+                android:id="@+id/tvReaderStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Disconnected"
+                android:textColor="#F44336"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:id="@+id/progressConnection"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvConnectionStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connecting..."
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Pulsante Play/Pause -->
+        <Button
+            android:id="@+id/btnPlayPause"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="▶"
+            android:textSize="32sp"
+            android:textColor="#000000"
+            android:backgroundTint="#CCFF00"
+            android:enabled="false" />
+    </LinearLayout>
 </LinearLayout>

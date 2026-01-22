@@ -28,6 +28,12 @@ router.get('/:invId/count', inventoriesController.getItemsCount);
 // GET /api/inventories/:invId/stats - Ottieni statistiche inventario
 router.get('/:invId/stats', inventoriesController.getStats);
 
+// GET /api/inventories/:invId/counters - Ottieni solo contatori (ottimizzato, nessun JOIN)
+router.get('/:invId/counters', inventoriesController.getCounters);
+
+// GET /api/inventories/:invId/epcs - Ottieni solo lista EPCs (ottimizzato, nessun JOIN)
+router.get('/:invId/epcs', inventoriesController.getEpcs);
+
 // GET /api/inventories/:invId/expectations - Ottieni aspettative per Expected/Unexpected/Lost
 router.get('/:invId/expectations', inventoriesController.getExpectations);
 

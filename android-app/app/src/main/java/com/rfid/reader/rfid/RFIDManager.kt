@@ -195,11 +195,12 @@ class RFIDManager private constructor(private val context: Context) {
                 config.setDPOState(DYNAMIC_POWER_OPTIMIZATION.DISABLE)
                 config.setBatchMode(BATCH_MODE.DISABLE)
 
-                // ✅ DISABILITA completamente beep hardware del reader
-                // Il beep sarà gestito via software (BeepHelper) solo su eventi specifici
+                // ✅ DISABILITA hardware beeper del Zebra reader
+                // Il beep è gestito via software (BeepHelper) SOLO su tag NUOVI
+                // Evita beep continui su tag duplicati letti ripetutamente
                 try {
                     config.setBeeperVolume(BEEPER_VOLUME.QUIET_BEEP)
-                    Log.d(TAG, "Hardware beeper DISABLED (using software beep)")
+                    Log.d(TAG, "Hardware beeper DISABLED (using software beep on unique tags only)")
                 } catch (e: Exception) {
                     Log.w(TAG, "Could not disable hardware beeper: ${e.message}")
                 }
