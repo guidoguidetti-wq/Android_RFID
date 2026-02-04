@@ -33,7 +33,7 @@ npm start
 node inspect_db.js
 
 # Direct database query (Windows)
-PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d neondb -c "\dt"
+PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d rfid_db -c "\dt"
 
 # Run tests (if configured)
 npm test
@@ -91,7 +91,7 @@ Android_RFID/
 - **Environment Variables** (Settings → Environment Variables):
   - `DB_HOST` = `ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech`
   - `DB_PORT` = `5432`
-  - `DB_NAME` = `neondb`
+  - `DB_NAME` = `rfid_db`
   - `DB_USER` = `neondb_owner`
   - `DB_PASSWORD` = `npg_BCdrof7vEPy1`
   - `DB_SSL` = `require`
@@ -182,7 +182,7 @@ vercel logs
 ## Database Schema (ESISTENTE - NON MODIFICARE)
 
 **Host**: ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech:5432
-**Database**: neondb
+**Database**: rfid_db
 **User**: neondb_owner
 **Password**: npg_BCdrof7vEPy1
 **SSL**: require (Neon PostgreSQL)
@@ -471,7 +471,7 @@ File: `backend/.env` (già configurato)
 PORT=3000
 DB_HOST=ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech
 DB_PORT=5432
-DB_NAME=neondb
+DB_NAME=rfid_db
 DB_USER=neondb_owner
 DB_PASSWORD=npg_BCdrof7vEPy1
 DB_SSL=require
@@ -539,7 +539,7 @@ const result = await pool.query('SELECT * FROM items WHERE item_id = $1', [epc])
 
 **Database**:
 - Verifica dati inseriti con `cd backend && node inspect_db.js`
-- Query diretta: `PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d neondb`
+- Query diretta: `PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d rfid_db`
 - Check integrity: `SELECT COUNT(*) FROM "Movements"`
 - Verifica Places/Zones esistono prima di scannerizzare
 
