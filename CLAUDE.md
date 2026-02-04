@@ -33,7 +33,7 @@ npm start
 node inspect_db.js
 
 # Direct database query (Windows)
-PGPASSWORD='iniAD16Z77oS' psql -h 57.129.5.234 -p 5432 -U rfidmanager -d rfid_db -c "\dt"
+PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d neondb -c "\dt"
 
 # Run tests (if configured)
 npm test
@@ -89,11 +89,12 @@ Android_RFID/
 **IMPORTANTE**: Nel dashboard Vercel configurare:
 - **Root Directory**: `backend` (Settings → General → Root Directory)
 - **Environment Variables** (Settings → Environment Variables):
-  - `DB_HOST` = `57.129.5.234`
+  - `DB_HOST` = `ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech`
   - `DB_PORT` = `5432`
-  - `DB_NAME` = `rfid_db`
-  - `DB_USER` = `rfidmanager`
-  - `DB_PASSWORD` = `iniAD16Z77oS`
+  - `DB_NAME` = `neondb`
+  - `DB_USER` = `neondb_owner`
+  - `DB_PASSWORD` = `npg_BCdrof7vEPy1`
+  - `DB_SSL` = `require`
   - `CORS_ORIGIN` = `*`
   - `NODE_ENV` = `production`
   - `READER_ID` = `RFD8500-DEFAULT`
@@ -180,10 +181,11 @@ vercel logs
 
 ## Database Schema (ESISTENTE - NON MODIFICARE)
 
-**Host**: 57.129.5.234:5432
-**Database**: rfid_db
-**User**: rfidmanager
-**Password**: iniAD16Z77oS
+**Host**: ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech:5432
+**Database**: neondb
+**User**: neondb_owner
+**Password**: npg_BCdrof7vEPy1
+**SSL**: require (Neon PostgreSQL)
 
 ### Tabelle Principali
 
@@ -467,11 +469,12 @@ android-app/app/src/main/java/com/rfid/reader/
 File: `backend/.env` (già configurato)
 ```
 PORT=3000
-DB_HOST=57.129.5.234
+DB_HOST=ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech
 DB_PORT=5432
-DB_NAME=rfid_db
-DB_USER=rfidmanager
-DB_PASSWORD=iniAD16Z77oS
+DB_NAME=neondb
+DB_USER=neondb_owner
+DB_PASSWORD=npg_BCdrof7vEPy1
+DB_SSL=require
 CORS_ORIGIN=*
 READER_ID=RFD8500-DEFAULT
 ```
@@ -536,7 +539,7 @@ const result = await pool.query('SELECT * FROM items WHERE item_id = $1', [epc])
 
 **Database**:
 - Verifica dati inseriti con `cd backend && node inspect_db.js`
-- Query diretta: `PGPASSWORD='iniAD16Z77oS' psql -h 57.129.5.234 -p 5432 -U rfidmanager -d rfid_db`
+- Query diretta: `PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d neondb`
 - Check integrity: `SELECT COUNT(*) FROM "Movements"`
 - Verifica Places/Zones esistono prima di scannerizzare
 
