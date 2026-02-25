@@ -74,35 +74,21 @@ class TagDetailActivity : AppCompatActivity() {
     private fun updateProductFields(product: com.rfid.reader.network.ProductResponse, labels: Map<String, String>) {
         binding.glProductFields.removeAllViews()
 
-        val fields = listOf(
-            "fldd01" to product.fldd01,
-            "fld01" to product.fld01,
-            "fld02" to product.fld02,
-            "fld03" to product.fld03,
-            "fld04" to product.fld04,
-            "fld05" to product.fld05
-        )
-
-        fields.forEach { (key, value) ->
+        listOf(
+            product.fldd01,
+            product.fld01,
+            product.fld02,
+            product.fld03,
+            product.fld04,
+            product.fld05
+        ).forEach { value ->
             if (!value.isNullOrBlank()) {
-                val label = labels[key] ?: key
-                addFieldToGrid(label, value)
+                binding.glProductFields.addView(TextView(this).apply {
+                    text = value
+                    setPadding(0, 4, 0, 4)
+                })
             }
         }
-    }
-
-    private fun addFieldToGrid(label: String, value: String) {
-        val labelTv = TextView(this).apply {
-            text = "$label: "
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 4, 8, 4)
-        }
-        val valueTv = TextView(this).apply {
-            text = value
-            setPadding(0, 4, 0, 4)
-        }
-        binding.glProductFields.addView(labelTv)
-        binding.glProductFields.addView(valueTv)
     }
 }
 

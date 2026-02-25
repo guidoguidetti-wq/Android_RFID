@@ -70,14 +70,14 @@
                 android:textColor="#1976D2"
                 android:layout_marginTop="4dp" />
 
-            <GridLayout
+            <LinearLayout
                 android:id="@+id/glProductFields"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:columnCount="2"
+                android:orientation="vertical"
                 android:layout_marginTop="12dp">
                 <!-- Fields populated dynamically -->
-            </GridLayout>
+            </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 

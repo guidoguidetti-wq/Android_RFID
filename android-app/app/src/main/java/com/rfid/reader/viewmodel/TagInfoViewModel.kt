@@ -111,8 +111,9 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Phase 1 (immediate): increment counter, beep, add placeholder for mode_b/c.
+     * Phase 1 (immediate): increment counter and beep.
      * Phase 2 (debounced): all pending EPCs fetched IN PARALLEL from backend.
+     * Only EPCs registered in Items appear in the list; unregistered = Ignored.
      */
     private fun onTagRead(epc: String) {
         if (seenEpcs.contains(epc)) return
@@ -121,14 +122,9 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         _rawTagCount.postValue(seenEpcs.size)
         beepHelper.playBeep()
 
-        val mode = settingsManager.getTagReadingMode()
-
         if (checkedTagsCache.containsKey(epc)) {
-            applyModeAndShow(epc, checkedTagsCache[epc], mode)
+            applyModeAndShow(epc, checkedTagsCache[epc])
         } else {
-            if (mode == "mode_b" || mode == "mode_c") {
-                addOrUpdateInList(InventoryItemDetail(epc, "...", null, null, null, null))
-            }
             pendingBatch.add(epc)
             scheduleDebounce()
         }
@@ -152,8 +148,6 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         val toFetch = pendingBatch.filter { !checkedTagsCache.containsKey(it) }
         pendingBatch.clear()
         if (toFetch.isEmpty()) return
-
-        val mode = settingsManager.getTagReadingMode()
 
         // Step 1: fetch all items in parallel
         val itemResults: List<Pair<String, ItemResponse?>> = coroutineScope {
@@ -202,10 +196,10 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                     fldd01 = product?.fldd01
                 )
                 checkedTagsCache[epc] = detail
-                applyModeAndShow(epc, detail, mode)
+                applyModeAndShow(epc, detail)
             } else {
                 checkedTagsCache[epc] = null
-                applyModeAndShow(epc, null, mode)
+                applyModeAndShow(epc, null)
             }
         }
 
@@ -213,19 +207,9 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         _ignoredCount.postValue(checkedTagsCache.values.count { it == null })
     }
 
-    private fun applyModeAndShow(epc: String, item: InventoryItemDetail?, mode: String) {
-        when (mode) {
-            "mode_a" -> {
-                if (item != null) addOrUpdateInList(item) else removeFromList(epc)
-            }
-            else -> {
-                if (item != null) {
-                    addOrUpdateInList(item)
-                } else {
-                    addOrUpdateInList(InventoryItemDetail(epc, "NON CENSITO", null, null, null, null))
-                }
-            }
-        }
+    // Registered items go in the list; unregistered are counted as Ignored only.
+    private fun applyModeAndShow(epc: String, item: InventoryItemDetail?) {
+        if (item != null) addOrUpdateInList(item) else removeFromList(epc)
     }
 
     private fun addOrUpdateInList(item: InventoryItemDetail) {
