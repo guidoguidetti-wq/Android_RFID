@@ -15,38 +15,30 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Product ID + fldd01 on same row -->
-        <LinearLayout
+        <!-- Product ID -->
+        <TextView
+            android:id="@+id/tvProductId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PROD-123"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#2196F3"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Description (fldd01) on its own row -->
+        <TextView
+            android:id="@+id/tvFldd01"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvProductId"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="PROD-123"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#2196F3"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:id="@+id/tvFldd01"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Description"
-                android:textSize="13sp"
-                android:textColor="#4CAF50"
-                android:gravity="end"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:layout_marginStart="8dp" />
-        </LinearLayout>
+            android:text="Description"
+            android:textSize="13sp"
+            android:textColor="#4CAF50"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:layout_marginTop="2dp" />
 
         <!-- Fields fld01, fld02, fld03 in a row -->
         <LinearLayout

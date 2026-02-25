@@ -119,6 +119,25 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "Volume beep: $volume", Toast.LENGTH_SHORT).show()
         }
 
+        // Tag Info Delay SeekBar (100-2000ms in steps of 100ms, progress 0-19)
+        binding.seekBarTagInfoDelay.max = 19
+        val currentTagDelay = settingsManager.getTagInfoDelayMs()
+        binding.seekBarTagInfoDelay.progress = ((currentTagDelay / 100) - 1).toInt().coerceIn(0, 19)
+        binding.tvTagInfoDelayValue.text = "${currentTagDelay}ms"
+
+        binding.seekBarTagInfoDelay.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val delayMs = (progress + 1) * 100
+                binding.tvTagInfoDelayValue.text = "${delayMs}ms"
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                val delayMs = ((seekBar?.progress ?: 0) + 1) * 100L
+                settingsManager.setTagInfoDelayMs(delayMs)
+                android.util.Log.d(TAG, "Tag info delay set to: ${delayMs}ms")
+            }
+        })
+
         // Backend URL
         binding.etBackendUrl.setText(settingsManager.getBackendUrl())
         binding.btnSaveUrl.setOnClickListener {

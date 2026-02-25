@@ -75,6 +75,7 @@ class TagDetailActivity : AppCompatActivity() {
         binding.glProductFields.removeAllViews()
 
         val fields = listOf(
+            "fldd01" to product.fldd01,
             "fld01" to product.fld01,
             "fld02" to product.fld02,
             "fld03" to product.fld03,

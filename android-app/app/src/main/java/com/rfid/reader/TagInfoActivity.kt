@@ -110,7 +110,10 @@ class TagInfoActivity : AppCompatActivity() {
     private fun setupObservers() {
         viewModel.foundTags.observe(this) { tags ->
             adapter.submitList(tags)
-            binding.tvFoundCount.text = tags.size.toString()
+        }
+
+        viewModel.rawTagCount.observe(this) { count ->
+            binding.tvFoundCount.text = count.toString()
         }
 
         viewModel.isConnected.observe(this) { connected ->
@@ -138,7 +141,11 @@ class TagInfoActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         binding.btnBack.setOnClickListener { finish() }
-        
+
+        binding.btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
         binding.btnPlayPause.setOnClickListener {
             viewModel.toggleScan()
         }
