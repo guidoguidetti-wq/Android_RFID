@@ -593,10 +593,14 @@ exports.addScan = async (req, res) => {
     );
 
     const count = parseInt(countersResult.rows[0].total_count) || 0;
+    const expectedCount  = parseInt(countersResult.rows[0].expected_count)   || 0;
+    const unexpectedCount= parseInt(countersResult.rows[0].unexpected_count) || 0;
+    const lostCount      = parseInt(countersResult.rows[0].lost_count)       || 0;
     const counters = {
-      expectedCount: parseInt(countersResult.rows[0].expected_count) || 0,
-      unexpectedCount: parseInt(countersResult.rows[0].unexpected_count) || 0,
-      lostCount: parseInt(countersResult.rows[0].lost_count) || 0
+      expectedCount,
+      unexpectedCount,
+      lostCount,
+      ignoredCount: Math.max(0, count - expectedCount - unexpectedCount - lostCount)
     };
 
     // ✅ OTTIMIZZAZIONE: Usa inventory già caricato (linea 439) invece di ri-caricarlo
@@ -844,10 +848,15 @@ exports.addBatchScan = async (req, res) => {
       [invId]
     );
 
+    const batchExpected   = parseInt(countersResult.rows[0].expected_count)   || 0;
+    const batchUnexpected = parseInt(countersResult.rows[0].unexpected_count) || 0;
+    const batchLost       = parseInt(countersResult.rows[0].lost_count)       || 0;
+    const batchTotal      = parseInt(countersResult.rows[0].total_count)      || 0;
     const counters = {
-      expectedCount:   parseInt(countersResult.rows[0].expected_count)   || 0,
-      unexpectedCount: parseInt(countersResult.rows[0].unexpected_count) || 0,
-      lostCount:       parseInt(countersResult.rows[0].lost_count)       || 0
+      expectedCount:   batchExpected,
+      unexpectedCount: batchUnexpected,
+      lostCount:       batchLost,
+      ignoredCount:    Math.max(0, batchTotal - batchExpected - batchUnexpected - batchLost)
     };
 
     // Per checklist: ricalcola lost come totalExpected - expectedCount

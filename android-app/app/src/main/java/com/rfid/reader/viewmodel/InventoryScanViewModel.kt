@@ -52,6 +52,9 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
     private val _lostCount = MutableLiveData<Int>(0)
     val lostCount: LiveData<Int> = _lostCount
 
+    private val _ignoredCount = MutableLiveData<Int>(0)
+    val ignoredCount: LiveData<Int> = _ignoredCount
+
     // Modalità inventario: "normal", "checklist", "last_place" (stock)
     private var inventoryMode: String = "normal"
 
@@ -169,6 +172,9 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                 }
                 _totalTagsCount.value = totalScanned
 
+                // Ignored = tag letti ma non censiti in Items (nessun flag impostato)
+                val ignoredFromDb = Math.max(0, counters.total_count - counters.expected_count - counters.unexpected_count - counters.lost_count)
+
                 // Aggiorna counter in base alla modalità
                 when (inventoryMode) {
                     "normal" -> {
@@ -176,7 +182,8 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = 0  // Non usato
                         _lostCount.value = 0        // Non usato
-                        android.util.Log.d(TAG, "Normal mode loaded - Total: ${counters.total_count}, Validated: ${counters.expected_count}")
+                        _ignoredCount.value = ignoredFromDb
+                        android.util.Log.d(TAG, "Normal mode loaded - Total: ${counters.total_count}, Validated: ${counters.expected_count}, Ignored: $ignoredFromDb")
                     }
                     "checklist" -> {
                         // ✅ CHECKLIST MODE: Tutti i counter attivi
@@ -184,20 +191,23 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                         _unexpectedCount.value = counters.unexpected_count
                         // Lost = totalExpected - expected (calcolato dal backend)
                         _lostCount.value = Math.max(0, totalExpected - counters.expected_count)
-                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${_lostCount.value}")
+                        _ignoredCount.value = ignoredFromDb
+                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${_lostCount.value}, Ignored: $ignoredFromDb")
                     }
                     "last_place" -> {
                         // ✅ STOCK MODE: Logica esistente
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = counters.unexpected_count
                         _lostCount.value = counters.lost_count
-                        android.util.Log.d(TAG, "Stock mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${counters.lost_count}")
+                        _ignoredCount.value = ignoredFromDb
+                        android.util.Log.d(TAG, "Stock mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${counters.lost_count}, Ignored: $ignoredFromDb")
                     }
                     else -> {
                         // Fallback
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = counters.unexpected_count
                         _lostCount.value = counters.lost_count
+                        _ignoredCount.value = ignoredFromDb
                         android.util.Log.d(TAG, "Unknown mode - using all counters from DB")
                     }
                 }
@@ -210,12 +220,14 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                 _expectedCount.value = 0
                 _unexpectedCount.value = 0
                 _lostCount.value = if (inventoryMode == "checklist") totalExpected else 0
+                _ignoredCount.value = 0
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error loading counters", e)
             _expectedCount.value = 0
             _unexpectedCount.value = 0
             _lostCount.value = totalExpected
+            _ignoredCount.value = 0
         }
     }
 
@@ -357,11 +369,14 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
         beepHelper.playBeep()
         android.util.Log.d(TAG, "Tag $epc - immediate counter → ${currentTotal + 1}")
 
-        // Normal mode: tutti i tag scansionati sono "validated" → incrementa subito
-        // Il valore verrà sovritto dalla risposta del backend (flushBatch) quando disponibile
+        // Normal mode: in mode_b/mode_c tutti i tag sono expected → incrementa subito.
+        // In mode_a non sappiamo se il tag è censito finché il backend non risponde:
+        // expected/ignored verranno aggiornati da flushBatch().
         if (inventoryMode == "normal") {
-            val currentExpected = _expectedCount.value ?: 0
-            _expectedCount.value = currentExpected + 1
+            val scanMode = settingsManager.getTagReadingMode()
+            if (scanMode == "mode_b" || scanMode == "mode_c") {
+                _expectedCount.value = (_expectedCount.value ?: 0) + 1
+            }
         }
 
         // Accoda nel buffer batch
@@ -415,18 +430,21 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                             _expectedCount.value = counters.expectedCount
                             _unexpectedCount.value = 0
                             _lostCount.value = 0
-                            android.util.Log.d(TAG, "Normal - Validated: ${counters.expectedCount}")
+                            _ignoredCount.value = counters.ignoredCount
+                            android.util.Log.d(TAG, "Normal - Validated: ${counters.expectedCount}, Ignored: ${counters.ignoredCount}")
                         }
                         "checklist", "last_place" -> {
                             _expectedCount.value = counters.expectedCount
                             _unexpectedCount.value = counters.unexpectedCount
                             _lostCount.value = counters.lostCount
-                            android.util.Log.d(TAG, "Mode $inventoryMode - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}")
+                            _ignoredCount.value = counters.ignoredCount
+                            android.util.Log.d(TAG, "Mode $inventoryMode - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}, Ignored: ${counters.ignoredCount}")
                         }
                         else -> {
                             _expectedCount.value = counters.expectedCount
                             _unexpectedCount.value = counters.unexpectedCount
                             _lostCount.value = counters.lostCount
+                            _ignoredCount.value = counters.ignoredCount
                         }
                     }
                 }
@@ -534,10 +552,11 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                 // Resettare lista tag scannati in questa sessione
                 scannedEpcs.clear()
 
-                // Reset ALL counters (Expected/Unexpected/Lost)
+                // Reset ALL counters (Expected/Unexpected/Lost/Ignored)
                 _expectedCount.postValue(0)
                 _unexpectedCount.postValue(0)
                 _lostCount.postValue(0)
+                _ignoredCount.postValue(0)
 
                 // Reload expectations to re-initialize counters properly
                 loadExpectations()

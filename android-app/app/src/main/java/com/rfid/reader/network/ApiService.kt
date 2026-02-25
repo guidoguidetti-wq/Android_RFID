@@ -185,7 +185,8 @@ data class BatchScanToInventoryResponse(
 data class InventoryCounters(
     val expectedCount: Int,
     val unexpectedCount: Int,
-    val lostCount: Int
+    val lostCount: Int,
+    val ignoredCount: Int = 0
 )
 
 data class ScanToInventoryResponse(

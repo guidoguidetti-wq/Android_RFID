@@ -164,6 +164,12 @@ class InventoryScanStockActivity : AppCompatActivity() {
             android.util.Log.d(TAG, "Lost count: $count")
         }
 
+        // Contatore Ignored (tag letti ma non censiti in Items)
+        viewModel.ignoredCount.observe(this) { count ->
+            binding.tvIgnoredAnnotation.text = "$count Ignored"
+            android.util.Log.d(TAG, "Ignored count: $count")
+        }
+
         // Total Expected (per badge)
         viewModel.totalExpectedLive.observe(this) { totalExp ->
             binding.tvExpectedTotal.text = "($totalExp)"
