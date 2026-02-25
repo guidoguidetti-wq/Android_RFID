@@ -307,32 +307,29 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
             }
         }
 
-        // Osserva tag letti
+        // Osserva tag letti — usa tagReadFlow (SharedFlow, solo nuove letture hardware, no replay)
+        // Evita di iterare l'intera lista accumulata ad ogni aggiornamento RSSI (ogni 30ms)
         viewModelScope.launch {
-            rfidManager.tags.collect { tagList ->
-                android.util.Log.d(TAG, "Tags flow collected: ${tagList.size} tags")
+            rfidManager.tagReadFlow.collect { tagList ->
+                android.util.Log.d(TAG, "tagReadFlow: ${tagList.size} tags in batch")
 
-                // Per ogni tag letto
+                val minRssi = settingsManager.getMinRssi()
+                val epcPrefix = settingsManager.getEpcPrefixFilter()
+
                 tagList.forEach { tag ->
                     val epc = tag.tagID
                     val rssi = tag.peakRSSI
 
-                    // Applica filtri RSSI
-                    val minRssi = settingsManager.getMinRssi()
                     if (rssi < minRssi) {
                         android.util.Log.d(TAG, "Tag $epc filtered by RSSI: $rssi < $minRssi")
                         return@forEach
                     }
 
-                    // Applica filtro prefisso EPC
-                    val epcPrefix = settingsManager.getEpcPrefixFilter()
                     if (epcPrefix.isNotEmpty() && !epc.startsWith(epcPrefix)) {
                         android.util.Log.d(TAG, "Tag $epc filtered by prefix: doesn't match '$epcPrefix'")
                         return@forEach
                     }
 
-                    // ✅ Passa TUTTI i tag a sendTagToInventory (gestisce duplicati internamente)
-                    android.util.Log.d(TAG, "Tag detected: $epc (RSSI: $rssi)")
                     sendTagToInventory(epc)
                 }
             }
@@ -427,14 +424,12 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                     }
                 }
             } else {
-                android.util.Log.e(TAG, "Batch error: ${response.code()} - rolling back ${batch.size} tags")
-                batch.forEach { scannedEpcs.remove(it) }
-                _totalTagsCount.value = ((_totalTagsCount.value ?: batch.size) - batch.size).coerceAtLeast(0)
+                // Errore backend: i tag restano in scannedEpcs (counter non si azzera)
+                // L'utente vede il count corretto; i dati verranno salvati al prossimo retry manuale
+                android.util.Log.e(TAG, "Batch error: ${response.code()} for ${batch.size} tags (keeping counter, data not saved to DB)")
             }
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Batch exception: ${e.message} - rolling back ${batch.size} tags", e)
-            batch.forEach { scannedEpcs.remove(it) }
-            _totalTagsCount.value = ((_totalTagsCount.value ?: batch.size) - batch.size).coerceAtLeast(0)
+            android.util.Log.e(TAG, "Batch exception: ${e.message} for ${batch.size} tags (keeping counter)", e)
         }
     }
 
