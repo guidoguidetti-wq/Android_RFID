@@ -68,7 +68,7 @@ class InventorySettingsActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnSave.isEnabled = isModeA
+        // btnSave always enabled - batch delay can be saved in any mode
     }
 
     private fun loadProductLabels() {

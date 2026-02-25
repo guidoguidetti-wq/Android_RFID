@@ -357,6 +357,13 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
         beepHelper.playBeep()
         android.util.Log.d(TAG, "Tag $epc - immediate counter → ${currentTotal + 1}")
 
+        // Normal mode: tutti i tag scansionati sono "validated" → incrementa subito
+        // Il valore verrà sovritto dalla risposta del backend (flushBatch) quando disponibile
+        if (inventoryMode == "normal") {
+            val currentExpected = _expectedCount.value ?: 0
+            _expectedCount.value = currentExpected + 1
+        }
+
         // Accoda nel buffer batch
         pendingBatch.add(epc)
 
