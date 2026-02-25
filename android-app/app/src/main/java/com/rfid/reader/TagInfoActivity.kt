@@ -116,6 +116,10 @@ class TagInfoActivity : AppCompatActivity() {
             binding.tvFoundCount.text = count.toString()
         }
 
+        viewModel.ignoredCount.observe(this) { count ->
+            binding.tvIgnoredAnnotation.text = "$count Ignored"
+        }
+
         viewModel.isConnected.observe(this) { connected ->
             binding.btnPlayPause.isEnabled = connected
         }

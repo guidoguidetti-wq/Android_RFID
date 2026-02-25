@@ -6,11 +6,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.rfid.reader.network.InventoryItemDetail
+import com.rfid.reader.network.ItemResponse
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.rfid.RFIDManager
 import com.rfid.reader.utils.BeepHelper
 import com.rfid.reader.utils.SettingsManager
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -23,9 +27,13 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     private val _foundTags = MutableLiveData<List<InventoryItemDetail>>(emptyList())
     val foundTags: LiveData<List<InventoryItemDetail>> = _foundTags
 
-    // Immediate counter: updates as soon as a new EPC is read
+    // Immediate counter: updates as soon as a new EPC is read (before any HTTP call)
     private val _rawTagCount = MutableLiveData<Int>(0)
     val rawTagCount: LiveData<Int> = _rawTagCount
+
+    // Tags read but not registered in Items (updated after each batch flush)
+    private val _ignoredCount = MutableLiveData<Int>(0)
+    val ignoredCount: LiveData<Int> = _ignoredCount
 
     private val _isScanning = MutableLiveData<Boolean>(false)
     val isScanning: LiveData<Boolean> = _isScanning
@@ -39,13 +47,13 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     private val _connectionProgress = MutableLiveData<Boolean>(false)
     val connectionProgress: LiveData<Boolean> = _connectionProgress
 
-    // Cache: null = not registered, non-null = registered with product details
+    // Cache: null = not registered in Items, non-null = registered with product details
     private val checkedTagsCache = mutableMapOf<String, InventoryItemDetail?>()
 
-    // EPCs shown immediately (before backend validation)
+    // EPCs seen so far (immediate dedup)
     private val seenEpcs = mutableSetOf<String>()
 
-    // EPCs pending backend fetch (debounce batch)
+    // EPCs queued for backend fetch (debounce batch)
     private val pendingBatch = mutableSetOf<String>()
     private var debounceJob: Job? = null
 
@@ -90,28 +98,24 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             var lastTriggerState = false
             rfidManager.triggerPressed.collect { pressed ->
-                if (lastTriggerState && !pressed) {
-                    toggleScan()
-                }
+                if (lastTriggerState && !pressed) toggleScan()
                 lastTriggerState = pressed
             }
         }
 
         viewModelScope.launch {
             rfidManager.tagReadFlow.collect { tagList ->
-                tagList.forEach { tag ->
-                    onTagRead(tag.tagID)
-                }
+                tagList.forEach { tag -> onTagRead(tag.tagID) }
             }
         }
     }
 
     /**
      * Phase 1 (immediate): increment counter, beep, add placeholder for mode_b/c.
-     * Phase 2 (debounced): fetch backend data and update list with real details.
+     * Phase 2 (debounced): all pending EPCs fetched IN PARALLEL from backend.
      */
     private fun onTagRead(epc: String) {
-        if (seenEpcs.contains(epc)) return  // Already handled this EPC
+        if (seenEpcs.contains(epc)) return
 
         seenEpcs.add(epc)
         _rawTagCount.postValue(seenEpcs.size)
@@ -120,10 +124,8 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         val mode = settingsManager.getTagReadingMode()
 
         if (checkedTagsCache.containsKey(epc)) {
-            // Already fetched from backend — apply directly
             applyModeAndShow(epc, checkedTagsCache[epc], mode)
         } else {
-            // Show placeholder immediately for mode_b/c, then schedule fetch
             if (mode == "mode_b" || mode == "mode_c") {
                 addOrUpdateInList(InventoryItemDetail(epc, "...", null, null, null, null))
             }
@@ -140,60 +142,83 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Fetches all pending EPCs in parallel:
+     * 1) All item lookups in parallel (1 call per EPC)
+     * 2) All unique product lookups in parallel (1 call per unique product_id)
+     * This reduces N×2 sequential calls to ~2 parallel bursts.
+     */
     private suspend fun flushPendingBatch() {
-        val toFetch = pendingBatch.toSet()
+        val toFetch = pendingBatch.filter { !checkedTagsCache.containsKey(it) }
         pendingBatch.clear()
+        if (toFetch.isEmpty()) return
 
-        for (epc in toFetch) {
-            if (checkedTagsCache.containsKey(epc)) continue
+        val mode = settingsManager.getTagReadingMode()
 
-            try {
-                val response = apiService.getItemByEpc(epc)
-                if (response.isSuccessful) {
-                    val itemResp = response.body()!!
-                    var detail = InventoryItemDetail(
-                        epc = epc,
-                        product_id = itemResp.item_product_id,
-                        fld01 = null,
-                        fld02 = null,
-                        fld03 = null,
-                        fldd01 = null
-                    )
-                    val prodId = itemResp.item_product_id
-                    if (prodId != null) {
-                        val prodResp = apiService.getProductById(prodId)
-                        if (prodResp.isSuccessful) {
-                            val p = prodResp.body()
-                            detail = detail.copy(
-                                fld01 = p?.fld01,
-                                fld02 = p?.fld02,
-                                fld03 = p?.fld03,
-                                fldd01 = p?.fldd01
-                            )
-                        }
+        // Step 1: fetch all items in parallel
+        val itemResults: List<Pair<String, ItemResponse?>> = coroutineScope {
+            toFetch.map { epc ->
+                async {
+                    try {
+                        val resp = apiService.getItemByEpc(epc)
+                        if (resp.isSuccessful) epc to resp.body() else epc to null
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "Error fetching item $epc", e)
+                        epc to null
                     }
-                    checkedTagsCache[epc] = detail
-                    applyModeAndShow(epc, detail, settingsManager.getTagReadingMode())
-                } else {
-                    checkedTagsCache[epc] = null
-                    applyModeAndShow(epc, null, settingsManager.getTagReadingMode())
                 }
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Error fetching tag $epc", e)
+            }.awaitAll()
+        }
+
+        // Step 2: collect unique product IDs and fetch them in parallel
+        val uniqueProductIds = itemResults
+            .mapNotNull { (_, item) -> item?.item_product_id }
+            .toSet()
+
+        val productMap = coroutineScope {
+            uniqueProductIds.map { prodId ->
+                async {
+                    try {
+                        val resp = apiService.getProductById(prodId)
+                        if (resp.isSuccessful) prodId to resp.body() else prodId to null
+                    } catch (e: Exception) {
+                        prodId to null
+                    }
+                }
+            }.awaitAll()
+        }.toMap()
+
+        // Step 3: build InventoryItemDetail and update list
+        for ((epc, itemBody) in itemResults) {
+            if (itemBody != null) {
+                val prodId = itemBody.item_product_id
+                val product = if (prodId != null) productMap[prodId] else null
+                val detail = InventoryItemDetail(
+                    epc = epc,
+                    product_id = prodId,
+                    fld01 = product?.fld01,
+                    fld02 = product?.fld02,
+                    fld03 = product?.fld03,
+                    fldd01 = product?.fldd01
+                )
+                checkedTagsCache[epc] = detail
+                applyModeAndShow(epc, detail, mode)
+            } else {
+                checkedTagsCache[epc] = null
+                applyModeAndShow(epc, null, mode)
             }
         }
+
+        // Update ignored count: EPCs confirmed as NOT in Items
+        _ignoredCount.postValue(checkedTagsCache.values.count { it == null })
     }
 
     private fun applyModeAndShow(epc: String, item: InventoryItemDetail?, mode: String) {
         when (mode) {
             "mode_a" -> {
-                if (item != null) {
-                    addOrUpdateInList(item)
-                } else {
-                    removeFromList(epc)
-                }
+                if (item != null) addOrUpdateInList(item) else removeFromList(epc)
             }
-            else -> {  // mode_b, mode_c, default
+            else -> {
                 if (item != null) {
                     addOrUpdateInList(item)
                 } else {
@@ -206,19 +231,13 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     private fun addOrUpdateInList(item: InventoryItemDetail) {
         val currentList = _foundTags.value?.toMutableList() ?: mutableListOf()
         val idx = currentList.indexOfFirst { it.epc == item.epc }
-        if (idx >= 0) {
-            currentList[idx] = item  // Replace placeholder with real data
-        } else {
-            currentList.add(0, item)  // Insert new at top
-        }
+        if (idx >= 0) currentList[idx] = item else currentList.add(0, item)
         _foundTags.postValue(currentList)
     }
 
     private fun removeFromList(epc: String) {
         val currentList = _foundTags.value?.toMutableList() ?: mutableListOf()
-        if (currentList.removeAll { it.epc == epc }) {
-            _foundTags.postValue(currentList)
-        }
+        if (currentList.removeAll { it.epc == epc }) _foundTags.postValue(currentList)
     }
 
     fun connectReader() {
@@ -236,11 +255,7 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun toggleScan() {
-        if (_isScanning.value == true) {
-            stopScan()
-        } else {
-            startScan()
-        }
+        if (_isScanning.value == true) stopScan() else startScan()
     }
 
     private fun startScan() {
@@ -262,6 +277,7 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         rfidManager.clearTags()
         _foundTags.value = emptyList()
         _rawTagCount.value = 0
+        _ignoredCount.value = 0
         checkedTagsCache.clear()
         seenEpcs.clear()
         pendingBatch.clear()
