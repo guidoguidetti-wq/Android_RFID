@@ -52,6 +52,9 @@ router.put('/:invId/close', inventoriesController.closeInventory);
 // POST /api/inventories/:invId/scan - Aggiungi scan a inventario
 router.post('/:invId/scan', inventoriesController.addScan);
 
+// POST /api/inventories/:invId/batch-scan - Aggiungi batch di scan a inventario (ottimizzato)
+router.post('/:invId/batch-scan', inventoriesController.addBatchScan);
+
 // DELETE /api/inventories/:invId - Elimina inventario
 router.delete('/:invId', inventoriesController.deleteInventory);
 

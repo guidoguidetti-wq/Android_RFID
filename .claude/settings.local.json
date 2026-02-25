@@ -85,7 +85,9 @@
       "Bash(taskkill:*)",
       "Bash(test:*)",
       "Bash(vercel --prod:*)",
-      "WebFetch(domain:android-rfid-git-main-guidoguidetti-wqs-projects.vercel.app)"
+      "WebFetch(domain:android-rfid-git-main-guidoguidetti-wqs-projects.vercel.app)",
+      "WebFetch(domain:android-rfid-murex.vercel.app)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1)"
     ]
   }
 }

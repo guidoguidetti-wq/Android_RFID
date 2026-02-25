@@ -5,12 +5,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.rfid.reader.network.BatchScanToInventoryRequest
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.network.ScanToInventoryRequest
 import com.rfid.reader.rfid.RFIDManager
 import com.rfid.reader.utils.BeepHelper
 import com.rfid.reader.utils.SettingsManager
 import com.rfid.reader.utils.SessionManager
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -27,6 +30,10 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
     private var currentInventoryId: Int = 0
     private val scannedEpcs = mutableSetOf<String>() // Track EPCs scannati in questa sessione
+
+    // ── Batch debounce ──────────────────────────────────────────────────────
+    private val pendingBatch = mutableListOf<String>() // EPCs in attesa di essere inviati
+    private var batchJob: Job? = null                  // Job di debounce corrente
 
     // Contatore totale tag unici letti (esistenti + nuovi)
     private val _totalTagsCount = MutableLiveData<Int>(0)
@@ -333,117 +340,101 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
-     * Invia un tag scannerizzato al backend per l'inventario corrente
-     * ✅ NUOVO COMPORTAMENTO (2026-01-22):
-     * - Total counter incrementato IMMEDIATAMENTE (client-side, sincronizzato con beep)
-     * - Validazione backend ASINCRONA (aggiorna solo counter Validated/Expected/Unexpected/Lost)
+     * Riceve un tag letto dal reader.
+     * - Beep + incremento counter principale: IMMEDIATI (client-side)
+     * - Validazione backend: BATCH con debounce configurabile (default 300 ms)
      */
     private fun sendTagToInventory(epc: String) {
-        viewModelScope.launch {
-            // ========== CONTROLLO DUPLICATI ==========
-            // Se il tag è già stato scannato in questa sessione, ignora (nessun beep, nessuna chiamata backend)
-            if (scannedEpcs.contains(epc)) {
-                android.util.Log.d(TAG, "Tag $epc already scanned in this session - ignoring (no beep)")
-                return@launch
-            }
+        // Duplicati: ignora senza beep né backend
+        if (scannedEpcs.contains(epc)) {
+            android.util.Log.d(TAG, "Tag $epc already scanned - ignoring")
+            return
+        }
 
-            // ✅ INCREMENTO IMMEDIATO (PRIMA del backend call, sincronizzato con beep)
-            // Aggiungi a scannedEpcs SUBITO per evitare riletti multipli
-            scannedEpcs.add(epc)
+        // Aggiungi subito a scannedEpcs per bloccare ri-letture del reader
+        scannedEpcs.add(epc)
 
-            // Incrementa counter principale IMMEDIATAMENTE (client-side)
-            val currentTotal = _totalTagsCount.value ?: 0
-            _totalTagsCount.value = currentTotal + 1
+        // Incremento counter principale e beep: immediati
+        val currentTotal = _totalTagsCount.value ?: 0
+        _totalTagsCount.value = currentTotal + 1
+        beepHelper.playBeep()
+        android.util.Log.d(TAG, "Tag $epc - immediate counter → ${currentTotal + 1}")
 
-            // ========== BEEP sincronizzato con incremento counter ==========
-            beepHelper.playBeep()
+        // Accoda nel buffer batch
+        pendingBatch.add(epc)
 
-            android.util.Log.d(TAG, "Tag $epc - IMMEDIATE increment to ${currentTotal + 1} (beep played)")
+        // Annulla il debounce precedente e riparte
+        batchJob?.cancel()
+        val delayMs = settingsManager.getBatchDelayMs()
+        batchJob = viewModelScope.launch {
+            delay(delayMs)
+            flushBatch()
+        }
+    }
 
-            // ========== VALIDAZIONE BACKEND ASINCRONA ==========
-            // La chiamata backend aggiorna solo i counter di validazione (Expected/Unexpected/Lost)
-            // NON aggiorna più il counter totale (già fatto sopra)
-            try {
-                val mode = settingsManager.getTagReadingMode()
-                val placeId = sessionManager.getUserPlace()
-                val zoneId = settingsManager.getInventoryZone()
+    /**
+     * Invia al backend tutti gli EPCs accumulati nel buffer.
+     * Aggiorna i counter di validazione (Expected/Unexpected/Lost) con la risposta.
+     * Su errore: rimuove gli EPCs dal set e decrementa il counter principale per permettere retry.
+     */
+    private suspend fun flushBatch() {
+        if (pendingBatch.isEmpty()) return
 
-                // Ottieni filtri prodotto attivi (solo se mode_a)
-                val productFilters = if (mode == "mode_a") {
-                    settingsManager.getActiveProductFilters()
-                } else {
-                    null
-                }
+        val batch = pendingBatch.toList()
+        pendingBatch.clear()
+        android.util.Log.d(TAG, "Flushing batch of ${batch.size} EPCs to inventory $currentInventoryId")
 
-                android.util.Log.d(TAG, "Sending tag $epc to inventory $currentInventoryId for validation (mode: $mode)")
+        try {
+            val mode = settingsManager.getTagReadingMode()
+            val placeId = sessionManager.getUserPlace()
+            val zoneId = settingsManager.getInventoryZone()
+            val productFilters = if (mode == "mode_a") settingsManager.getActiveProductFilters() else null
 
-                val response = apiService.addScanToInventory(
-                    currentInventoryId,
-                    ScanToInventoryRequest(
-                        epc = epc,
-                        mode = mode,
-                        placeId = placeId,
-                        zoneId = zoneId,
-                        productFilters = productFilters
-                    )
+            val response = apiService.addBatchScanToInventory(
+                currentInventoryId,
+                BatchScanToInventoryRequest(
+                    epcs = batch,
+                    mode = mode,
+                    placeId = placeId,
+                    zoneId = zoneId,
+                    productFilters = productFilters
                 )
+            )
 
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    val counters = body?.counters
+            if (response.isSuccessful) {
+                val counters = response.body()?.counters
+                android.util.Log.d(TAG, "Batch validated: ${response.body()?.processedCount} processed - Mode: $inventoryMode")
 
-                    android.util.Log.d(TAG, "Validation response received for $epc - Mode: $inventoryMode")
-
-                    // ✅ AGGIORNA SOLO i counter di validazione (NON il total counter)
-                    if (counters != null) {
-                        when (inventoryMode) {
-                            "normal" -> {
-                                // ✅ NORMAL MODE: Aggiorna solo "Validated" counter
-                                // - Principale: GIÀ incrementato sopra (client-side)
-                                // - Validated: aggiornato dal backend (tag con inv_expected = true)
-                                _expectedCount.value = counters.expectedCount
-                                _unexpectedCount.value = 0  // Non usato in normal mode
-                                _lostCount.value = 0        // Non usato in normal mode
-                                android.util.Log.d(TAG, "Normal mode - Validated updated to: ${counters.expectedCount}")
-                            }
-                            "checklist" -> {
-                                // ✅ CHECKLIST MODE: Aggiorna Expected/Unexpected/Lost
-                                // - Principale: GIÀ incrementato sopra
-                                _expectedCount.value = counters.expectedCount
-                                _unexpectedCount.value = counters.unexpectedCount
-                                _lostCount.value = counters.lostCount
-                                android.util.Log.d(TAG, "Checklist mode - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}")
-                            }
-                            "last_place" -> {
-                                // ✅ STOCK MODE: Aggiorna Expected/Unexpected/Lost
-                                // - Principale: GIÀ incrementato sopra
-                                _expectedCount.value = counters.expectedCount
-                                _unexpectedCount.value = counters.unexpectedCount
-                                _lostCount.value = counters.lostCount
-                                android.util.Log.d(TAG, "Stock mode - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}")
-                            }
-                            else -> {
-                                // Fallback
-                                _expectedCount.value = counters.expectedCount
-                                _unexpectedCount.value = counters.unexpectedCount
-                                _lostCount.value = counters.lostCount
-                            }
+                if (counters != null) {
+                    when (inventoryMode) {
+                        "normal" -> {
+                            _expectedCount.value = counters.expectedCount
+                            _unexpectedCount.value = 0
+                            _lostCount.value = 0
+                            android.util.Log.d(TAG, "Normal - Validated: ${counters.expectedCount}")
+                        }
+                        "checklist", "last_place" -> {
+                            _expectedCount.value = counters.expectedCount
+                            _unexpectedCount.value = counters.unexpectedCount
+                            _lostCount.value = counters.lostCount
+                            android.util.Log.d(TAG, "Mode $inventoryMode - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}")
+                        }
+                        else -> {
+                            _expectedCount.value = counters.expectedCount
+                            _unexpectedCount.value = counters.unexpectedCount
+                            _lostCount.value = counters.lostCount
                         }
                     }
-                } else {
-                    android.util.Log.e(TAG, "Error sending scan: ${response.code()}")
-                    // ✅ Su errore backend: rimuovi da scannedEpcs e decrementa counter (permette retry)
-                    scannedEpcs.remove(epc)
-                    _totalTagsCount.value = (_totalTagsCount.value ?: 1) - 1
-                    android.util.Log.d(TAG, "Tag $epc removed due to backend error - counter decremented to ${_totalTagsCount.value}")
                 }
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Error adding scan: ${e.message}", e)
-                // ✅ Su errore di rete: rimuovi da scannedEpcs e decrementa counter (permette retry)
-                scannedEpcs.remove(epc)
-                _totalTagsCount.value = (_totalTagsCount.value ?: 1) - 1
-                android.util.Log.d(TAG, "Tag $epc removed due to exception - counter decremented to ${_totalTagsCount.value}")
+            } else {
+                android.util.Log.e(TAG, "Batch error: ${response.code()} - rolling back ${batch.size} tags")
+                batch.forEach { scannedEpcs.remove(it) }
+                _totalTagsCount.value = ((_totalTagsCount.value ?: batch.size) - batch.size).coerceAtLeast(0)
             }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Batch exception: ${e.message} - rolling back ${batch.size} tags", e)
+            batch.forEach { scannedEpcs.remove(it) }
+            _totalTagsCount.value = ((_totalTagsCount.value ?: batch.size) - batch.size).coerceAtLeast(0)
         }
     }
 
@@ -481,13 +472,22 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
-     * Ferma la scansione RFID
+     * Ferma la scansione RFID e invia immediatamente eventuali tag pendenti nel buffer
      */
     fun stopScan() {
         android.util.Log.d(TAG, "Stopping scan...")
         viewModelScope.launch {
             rfidManager.stopInventory()
             _isScanning.value = false
+
+            // Cancella il debounce e invia subito il batch pendente (se presente)
+            batchJob?.cancel()
+            batchJob = null
+            if (pendingBatch.isNotEmpty()) {
+                android.util.Log.d(TAG, "Flushing ${pendingBatch.size} pending tags on scan stop")
+                flushBatch()
+            }
+
             android.util.Log.d(TAG, "Scan stopped")
         }
     }
@@ -497,11 +497,11 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
      * Ricarica i contatori dal backend
      */
     fun resetCounters() {
+        batchJob?.cancel()
+        batchJob = null
+        pendingBatch.clear()
         scannedEpcs.clear()
-
-        // ✅ Ricarica solo expectations (che carica anche i counter via loadExistingStatusCounters)
         loadExpectations()
-
         android.util.Log.d(TAG, "Counters reset - reloaded from backend")
     }
 

@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     // Default URL - usato se non configurato nelle SharedPreferences
-    private const val DEFAULT_BASE_URL = "http://192.168.1.32:3000/"
+    private const val DEFAULT_BASE_URL = "https://android-rfid-murex.vercel.app/"
     private const val PREFS_NAME = "RFIDSettings"
     private const val KEY_BACKEND_URL = "backend_url"
 

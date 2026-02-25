@@ -168,6 +168,20 @@ data class ScanToInventoryRequest(
     val status: String? = null  // "expected" o "unexpected"
 )
 
+data class BatchScanToInventoryRequest(
+    val epcs: List<String>,
+    val mode: String? = null,
+    val placeId: String? = null,
+    val zoneId: String? = null,
+    val productFilters: Map<String, String>? = null
+)
+
+data class BatchScanToInventoryResponse(
+    val success: Boolean,
+    val processedCount: Int,
+    val counters: InventoryCounters?
+)
+
 data class InventoryCounters(
     val expectedCount: Int,
     val unexpectedCount: Int,
@@ -327,6 +341,12 @@ interface ApiService {
         @Path("invId") invId: Int,
         @Body request: ScanToInventoryRequest
     ): Response<ScanToInventoryResponse>
+
+    @POST("api/inventories/{invId}/batch-scan")
+    suspend fun addBatchScanToInventory(
+        @Path("invId") invId: Int,
+        @Body request: BatchScanToInventoryRequest
+    ): Response<BatchScanToInventoryResponse>
 
     @POST("api/inventories")
     suspend fun createInventory(@Body request: CreateInventoryRequest): CreateInventoryResponse

@@ -629,6 +629,249 @@ exports.addScan = async (req, res) => {
 };
 
 /**
+ * POST /api/inventories/:invId/batch-scan
+ * Processa un array di EPCs in un'unica chiamata
+ * Ottimizzazione: query DB ridotte da N×5 a ~4 totali indipendentemente dalla dimensione del batch
+ */
+exports.addBatchScan = async (req, res) => {
+  try {
+    const { invId } = req.params;
+    const { epcs, mode, placeId, zoneId, productFilters } = req.body;
+
+    if (!epcs || !Array.isArray(epcs) || epcs.length === 0) {
+      return res.status(400).json({ error: 'epcs array required and must not be empty' });
+    }
+
+    console.log(`Batch scan for inventory ${invId}: ${epcs.length} EPCs, mode: ${mode || 'mode_c'}`);
+
+    // ── 1. Carica inventario (1 query) ──────────────────────────────────────
+    const inventory = await Inventory.findById(invId);
+    if (!inventory) {
+      return res.status(404).json({ error: 'Inventory not found' });
+    }
+
+    const isChecklistMode = inventory.inv_chk_id && inventory.inv_chk_id !== 0;
+    const isStockMode = inventory.inv_last === true;
+    const isNormalMode = !isChecklistMode && !isStockMode;
+
+    // ── 2. Carica items già presenti in inventory_items per questo batch (1 query) ──
+    const existingResult = await pool.query(
+      `SELECT int_epc, inv_lost FROM "inventory_items" WHERE int_inv_id = $1 AND int_epc = ANY($2)`,
+      [invId, epcs]
+    );
+    const existingMap = new Map(); // epc -> { inv_lost }
+    existingResult.rows.forEach(r => existingMap.set(r.int_epc, { inv_lost: r.inv_lost }));
+
+    // Tieni solo EPCs non ancora scansionati (o che erano "lost" → da aggiornare)
+    const epcsToProcess = epcs.filter(epc => {
+      const ex = existingMap.get(epc);
+      return !ex || ex.inv_lost === true;
+    });
+
+    if (epcsToProcess.length === 0) {
+      // Tutti già scansionati: restituisci solo i counter attuali
+      const cRes = await pool.query(
+        `SELECT COUNT(*) as total_count,
+                COUNT(CASE WHEN inv_expected = true THEN 1 END) as expected_count,
+                COUNT(CASE WHEN inv_unexpected = true THEN 1 END) as unexpected_count,
+                COUNT(CASE WHEN inv_lost = true THEN 1 END) as lost_count
+         FROM "inventory_items" WHERE int_inv_id = $1`,
+        [invId]
+      );
+      return res.json({
+        success: true,
+        processedCount: 0,
+        counters: {
+          expectedCount: parseInt(cRes.rows[0].expected_count) || 0,
+          unexpectedCount: parseInt(cRes.rows[0].unexpected_count) || 0,
+          lostCount: parseInt(cRes.rows[0].lost_count) || 0
+        }
+      });
+    }
+
+    // ── 3. Carica dati Items per tutti gli EPCs in una query (1 query) ───────
+    const itemsResult = await pool.query(
+      `SELECT item_id, item_product_id, place_last, zone_last FROM "Items" WHERE item_id = ANY($1)`,
+      [epcsToProcess]
+    );
+    const itemsMap = new Map(); // epc -> { item_product_id, place_last, zone_last }
+    itemsResult.rows.forEach(r => itemsMap.set(r.item_id, r));
+
+    // ── 4. Setup per modalità specifiche (1 query ciascuna se necessario) ────
+    let checklistProductsMap = null; // Map: productId -> { ckp_qta, ckp_qta_exp }
+    let expectedEpcsSet = null;      // Per Stock mode
+
+    if (isChecklistMode) {
+      const products = await ChecklistProduct.getByChecklistId(inventory.inv_chk_id);
+      checklistProductsMap = new Map();
+      products.forEach(p => checklistProductsMap.set(String(p.ckp_product_id), {
+        ckp_qta: parseInt(p.ckp_qta) || 0,
+        ckp_qta_exp: parseInt(p.ckp_qta_exp) || 0
+      }));
+    } else if (isStockMode) {
+      const lastPlace = inventory.inv_last_place;
+      const lastZones = inventory.inv_last_zones
+        ? inventory.inv_last_zones.split(/[;,]/).map(z => z.trim()).filter(z => z.length > 0)
+        : [];
+      let q = `SELECT item_id FROM "Items" WHERE place_last = $1`;
+      const p = [lastPlace];
+      if (lastZones.length > 0) { q += ` AND zone_last = ANY($2)`; p.push(lastZones); }
+      const expRes = await pool.query(q, p);
+      expectedEpcsSet = new Set(expRes.rows.map(r => r.item_id));
+    }
+
+    // ── 5. Classifica ogni EPC in memoria ────────────────────────────────────
+    const toInsertNew  = []; // { epc, invExpected, invUnexpected }
+    const toUpdateLost = []; // { epc, invExpected, invUnexpected }  (erano inv_lost=true)
+    const checklistIncrements = new Map(); // productId -> { expected, unexpected }
+
+    for (const epc of epcsToProcess) {
+      const itemData = itemsMap.get(epc);
+      const productId = itemData?.item_product_id ? String(itemData.item_product_id) : null;
+      const isLostUpdate = existingMap.has(epc) && existingMap.get(epc).inv_lost === true;
+
+      let calculatedStatus = null;
+      let shouldAdd = true;
+
+      if (isNormalMode) {
+        if (mode === 'mode_b') {
+          if (!itemData) {
+            // Crea item se non esiste (necessariamente sequenziale, raro)
+            await Item.createFromScan(epc, placeId, zoneId);
+          }
+          calculatedStatus = 'expected';
+        } else if (mode === 'mode_a') {
+          if (itemData) {
+            if (productFilters && Object.keys(productFilters).length > 0) {
+              const matches = await Item.matchesProductFilters(epc, productFilters);
+              if (!matches) shouldAdd = false;
+            }
+            if (shouldAdd) calculatedStatus = 'expected';
+          } else {
+            calculatedStatus = null; // Non censito → salva senza validazione
+          }
+        } else {
+          // mode_c
+          calculatedStatus = 'expected';
+        }
+      } else if (isChecklistMode) {
+        if (productId && checklistProductsMap && checklistProductsMap.has(productId)) {
+          const prod = checklistProductsMap.get(productId);
+          const inc = checklistIncrements.get(productId) || { expected: 0, unexpected: 0 };
+          const currentExpTotal = prod.ckp_qta_exp + inc.expected;
+          if (currentExpTotal + 1 <= prod.ckp_qta) {
+            calculatedStatus = 'expected';
+            inc.expected++;
+          } else {
+            calculatedStatus = 'unexpected';
+            inc.unexpected++;
+          }
+          checklistIncrements.set(productId, inc);
+        } else {
+          calculatedStatus = 'unexpected';
+        }
+      } else if (isStockMode) {
+        if (!itemData && mode === 'mode_a') {
+          shouldAdd = false;
+        } else {
+          calculatedStatus = (expectedEpcsSet && expectedEpcsSet.has(epc)) ? 'expected' : 'unexpected';
+        }
+      }
+
+      if (!shouldAdd) continue;
+
+      const invExpected   = calculatedStatus === 'expected';
+      const invUnexpected = calculatedStatus === 'unexpected';
+
+      if (isLostUpdate) {
+        toUpdateLost.push({ epc, invExpected, invUnexpected });
+      } else {
+        toInsertNew.push({ epc, invExpected, invUnexpected });
+      }
+    }
+
+    // ── 6. UPDATE items che erano lost (loop, di solito pochi) ───────────────
+    for (const item of toUpdateLost) {
+      await pool.query(
+        `UPDATE "inventory_items"
+         SET inv_lost = false, inv_expected = $3, inv_unexpected = $4
+         WHERE int_inv_id = $1 AND int_epc = $2`,
+        [invId, item.epc, item.invExpected, item.invUnexpected]
+      );
+    }
+
+    // ── 7. Bulk INSERT nuovi items (1 query) ──────────────────────────────────
+    if (toInsertNew.length > 0) {
+      const valuePlaceholders = toInsertNew.map((_, i) => {
+        const b = i * 4;
+        return `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, false)`;
+      }).join(', ');
+      const flatParams = toInsertNew.flatMap(item => [
+        invId, item.epc, item.invExpected, item.invUnexpected
+      ]);
+      await pool.query(
+        `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_expected, inv_unexpected, inv_lost)
+         VALUES ${valuePlaceholders}`,
+        flatParams
+      );
+    }
+
+    // ── 8. Aggiorna counter checklist in batch (1 query per prodotto unico) ──
+    for (const [productId, inc] of checklistIncrements) {
+      if (inc.expected > 0) {
+        await pool.query(
+          `UPDATE "checklist_products" SET ckp_qta_exp = ckp_qta_exp + $1
+           WHERE ckp_chk_id = $2 AND ckp_product_id = $3`,
+          [inc.expected, inventory.inv_chk_id, productId]
+        );
+      }
+      if (inc.unexpected > 0) {
+        await pool.query(
+          `UPDATE "checklist_products" SET ckp_qta_unexp = ckp_qta_unexp + $1
+           WHERE ckp_chk_id = $2 AND ckp_product_id = $3`,
+          [inc.unexpected, inventory.inv_chk_id, productId]
+        );
+      }
+    }
+
+    // ── 9. Counter finali (1 query) ───────────────────────────────────────────
+    const countersResult = await pool.query(
+      `SELECT COUNT(*) as total_count,
+              COUNT(CASE WHEN inv_expected = true THEN 1 END) as expected_count,
+              COUNT(CASE WHEN inv_unexpected = true THEN 1 END) as unexpected_count,
+              COUNT(CASE WHEN inv_lost = true THEN 1 END) as lost_count
+       FROM "inventory_items" WHERE int_inv_id = $1`,
+      [invId]
+    );
+
+    const counters = {
+      expectedCount:   parseInt(countersResult.rows[0].expected_count)   || 0,
+      unexpectedCount: parseInt(countersResult.rows[0].unexpected_count) || 0,
+      lostCount:       parseInt(countersResult.rows[0].lost_count)       || 0
+    };
+
+    // Per checklist: ricalcola lost come totalExpected - expectedCount
+    if (isChecklistMode) {
+      const updatedProducts = await ChecklistProduct.getByChecklistId(inventory.inv_chk_id);
+      const totalExpected = updatedProducts.reduce((sum, p) => sum + (parseInt(p.ckp_qta) || 0), 0);
+      counters.lostCount = Math.max(0, totalExpected - counters.expectedCount);
+    }
+
+    const processedCount = toInsertNew.length + toUpdateLost.length;
+    console.log(`Batch scan complete: ${processedCount} items processed out of ${epcs.length} EPCs`);
+
+    res.json({
+      success: true,
+      processedCount,
+      counters
+    });
+  } catch (error) {
+    console.error('Error in batch scan:', error);
+    res.status(500).json({ error: 'Failed to process batch scan', details: error.message });
+  }
+};
+
+/**
  * DELETE /api/inventories/:invId
  * Elimina un inventario
  */

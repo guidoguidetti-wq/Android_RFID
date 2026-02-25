@@ -104,6 +104,9 @@ class InventorySettingsActivity : AppCompatActivity() {
             editTexts[field]?.setText(value)
             editTexts[field]?.isEnabled = enabled
         }
+
+        // Batch delay
+        binding.etBatchDelay.setText(settingsManager.getBatchDelayMs().toString())
     }
 
     private fun setupListeners() {
@@ -132,6 +135,13 @@ class InventorySettingsActivity : AppCompatActivity() {
             settingsManager.setProductFilterEnabled(field, enabled)
             settingsManager.setProductFilter(field, value)
         }
+
+        // Salva batch delay (clamp tra 50ms e 2000ms)
+        val batchDelay = binding.etBatchDelay.text.toString().toLongOrNull()
+            ?.coerceIn(50L, 2000L)
+            ?: SettingsManager.DEFAULT_BATCH_DELAY_MS
+        settingsManager.setBatchDelayMs(batchDelay)
+        binding.etBatchDelay.setText(batchDelay.toString())
 
         Toast.makeText(this, "Filtri salvati con successo", Toast.LENGTH_SHORT).show()
         setResult(RESULT_OK)
