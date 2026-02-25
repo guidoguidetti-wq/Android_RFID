@@ -182,12 +182,12 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
             }.awaitAll()
         }.toMap()
 
-        // Step 3: build InventoryItemDetail and update list
+        // Step 3: populate cache for all fetched EPCs
         for ((epc, itemBody) in itemResults) {
             if (itemBody != null) {
                 val prodId = itemBody.item_product_id
                 val product = if (prodId != null) productMap[prodId] else null
-                val detail = InventoryItemDetail(
+                checkedTagsCache[epc] = InventoryItemDetail(
                     epc = epc,
                     product_id = prodId,
                     fld01 = product?.fld01,
@@ -195,13 +195,23 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                     fld03 = product?.fld03,
                     fldd01 = product?.fldd01
                 )
-                checkedTagsCache[epc] = detail
-                applyModeAndShow(epc, detail)
             } else {
                 checkedTagsCache[epc] = null
-                applyModeAndShow(epc, null)
             }
         }
+
+        // Step 4: single batch update of the list (avoids race condition from parallel postValue)
+        val currentList = _foundTags.value?.toMutableList() ?: mutableListOf()
+        for ((epc, _) in itemResults) {
+            val item = checkedTagsCache[epc]
+            if (item != null) {
+                val idx = currentList.indexOfFirst { it.epc == epc }
+                if (idx >= 0) currentList[idx] = item else currentList.add(0, item)
+            } else {
+                currentList.removeAll { it.epc == epc }
+            }
+        }
+        _foundTags.postValue(currentList)
 
         // Update ignored count: EPCs confirmed as NOT in Items
         _ignoredCount.postValue(checkedTagsCache.values.count { it == null })
