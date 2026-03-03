@@ -284,6 +284,20 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             rfidManager.stopInventory()
             _isScanning.postValue(false)
+            // Flush immediately without waiting for the debounce timer,
+            // like InventoryScanViewModel does on stop
+            if (pendingBatch.isNotEmpty() && !isFlushing) {
+                debounceJob?.cancel()
+                debounceJob = viewModelScope.launch {
+                    isFlushing = true
+                    try {
+                        flushPendingBatch()
+                    } finally {
+                        isFlushing = false
+                        if (pendingBatch.isNotEmpty()) scheduleDebounce()
+                    }
+                }
+            }
         }
     }
 

@@ -335,7 +335,7 @@
                     android:id="@+id/tvTagInfoDelayValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="500ms"
+                    android:text="300ms"
                     android:textSize="16sp"
                     android:textStyle="bold" />
             </LinearLayout>
