@@ -146,10 +146,6 @@ class TagInfoActivity : AppCompatActivity() {
     private fun setupListeners() {
         binding.btnBack.setOnClickListener { finish() }
 
-        binding.btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
         binding.btnPlayPause.setOnClickListener {
             viewModel.toggleScan()
         }

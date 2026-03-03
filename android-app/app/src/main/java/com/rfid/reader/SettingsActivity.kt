@@ -1,10 +1,18 @@
 package com.rfid.reader
 
+import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.InputType
+import android.view.MotionEvent
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.EditText
 import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -51,40 +59,44 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d(TAG, "Tag reading mode set to: $mode")
         }
 
-        // Power buttons (10-300, step 5)
+        // Power buttons (10-300, step 5) with long-press repeat + tap-to-edit
         binding.tvPowerValue.text = settingsManager.getReaderPower().toString()
 
-        binding.btnPowerMinus.setOnClickListener {
-            val current = settingsManager.getReaderPower()
-            val newVal = (current - 5).coerceAtLeast(10)
-            settingsManager.setReaderPower(newVal)
-            binding.tvPowerValue.text = newVal.toString()
-            android.util.Log.d(TAG, "Reader power set to: $newVal")
-        }
-        binding.btnPowerPlus.setOnClickListener {
-            val current = settingsManager.getReaderPower()
-            val newVal = (current + 5).coerceAtMost(300)
-            settingsManager.setReaderPower(newVal)
-            binding.tvPowerValue.text = newVal.toString()
-            android.util.Log.d(TAG, "Reader power set to: $newVal")
+        setupStepButton(binding.btnPowerMinus, step = -5, min = 10, max = 300,
+            getCurrent = { settingsManager.getReaderPower() },
+            save = { settingsManager.setReaderPower(it) },
+            display = { binding.tvPowerValue.text = it.toString() }
+        )
+        setupStepButton(binding.btnPowerPlus, step = 5, min = 10, max = 300,
+            getCurrent = { settingsManager.getReaderPower() },
+            save = { settingsManager.setReaderPower(it) },
+            display = { binding.tvPowerValue.text = it.toString() }
+        )
+        binding.tvPowerValue.setOnClickListener {
+            showEditDialog("Power (10–300)", settingsManager.getReaderPower(), 10, 300) { v ->
+                settingsManager.setReaderPower(v)
+                binding.tvPowerValue.text = v.toString()
+            }
         }
 
-        // RSSI buttons (-70 to -10, step 1)
+        // RSSI buttons (-70 to -10, step 1) with long-press repeat + tap-to-edit
         binding.tvRssiValue.text = settingsManager.getMinRssi().toString()
 
-        binding.btnRssiMinus.setOnClickListener {
-            val current = settingsManager.getMinRssi()
-            val newVal = (current - 1).coerceAtLeast(-70)
-            settingsManager.setMinRssi(newVal)
-            binding.tvRssiValue.text = newVal.toString()
-            android.util.Log.d(TAG, "Min RSSI set to: $newVal")
-        }
-        binding.btnRssiPlus.setOnClickListener {
-            val current = settingsManager.getMinRssi()
-            val newVal = (current + 1).coerceAtMost(-10)
-            settingsManager.setMinRssi(newVal)
-            binding.tvRssiValue.text = newVal.toString()
-            android.util.Log.d(TAG, "Min RSSI set to: $newVal")
+        setupStepButton(binding.btnRssiMinus, step = -1, min = -70, max = -10,
+            getCurrent = { settingsManager.getMinRssi() },
+            save = { settingsManager.setMinRssi(it) },
+            display = { binding.tvRssiValue.text = it.toString() }
+        )
+        setupStepButton(binding.btnRssiPlus, step = 1, min = -70, max = -10,
+            getCurrent = { settingsManager.getMinRssi() },
+            save = { settingsManager.setMinRssi(it) },
+            display = { binding.tvRssiValue.text = it.toString() }
+        )
+        binding.tvRssiValue.setOnClickListener {
+            showEditDialog("Min RSSI (−70 a −10)", settingsManager.getMinRssi(), -70, -10) { v ->
+                settingsManager.setMinRssi(v)
+                binding.tvRssiValue.text = v.toString()
+            }
         }
 
         // EPC Prefix Filter
@@ -196,6 +208,74 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+    }
+
+    /**
+     * Wires a +/− button with single-click step and long-press auto-repeat.
+     * Initial delay before repeat: 400ms; repeat interval: 80ms.
+     */
+    @Suppress("ClickableViewAccessibility")
+    private fun setupStepButton(
+        button: Button,
+        step: Int,
+        min: Int,
+        max: Int,
+        getCurrent: () -> Int,
+        save: (Int) -> Unit,
+        display: (Int) -> Unit
+    ) {
+        val handler = Handler(Looper.getMainLooper())
+        var repeatRunnable: Runnable? = null
+
+        fun applyStep() {
+            val newVal = (getCurrent() + step).coerceIn(min, max)
+            save(newVal)
+            display(newVal)
+        }
+
+        button.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    applyStep()
+                    repeatRunnable = object : Runnable {
+                        override fun run() {
+                            applyStep()
+                            handler.postDelayed(this, 80)
+                        }
+                    }
+                    handler.postDelayed(repeatRunnable!!, 400)
+                    v.isPressed = true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    repeatRunnable?.let { handler.removeCallbacks(it) }
+                    repeatRunnable = null
+                    v.isPressed = false
+                    v.performClick()
+                }
+            }
+            true
+        }
+    }
+
+    /** Opens a dialog with an EditText pre-filled with [current]; calls [onConfirm] on OK. */
+    private fun showEditDialog(title: String, current: Int, min: Int, max: Int, onConfirm: (Int) -> Unit) {
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or
+                    if (min < 0) InputType.TYPE_NUMBER_FLAG_SIGNED else 0
+            setText(current.toString())
+            selectAll()
+        }
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                val v = editText.text.toString().toIntOrNull()
+                if (v != null) onConfirm(v.coerceIn(min, max))
+                else Toast.makeText(this, "Valore non valido", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+        editText.post { editText.selectAll() }
     }
 
     private fun loadSettings() {

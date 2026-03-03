@@ -102,7 +102,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Power (10-300, step 5)"
+                android:text="Power (10-300)"
                 android:textSize="16sp" />
 
             <Button
@@ -120,7 +120,12 @@
                 android:text="270"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:gravity="center" />
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
 
             <Button
                 android:id="@+id/btnPowerPlus"
@@ -143,7 +148,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Min RSSI (-70 to -10, step 1)"
+                android:text="Min RSSI (-70 to -10)"
                 android:textSize="16sp" />
 
             <Button
@@ -161,7 +166,12 @@
                 android:text="-70"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:gravity="center" />
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
 
             <Button
                 android:id="@+id/btnRssiPlus"

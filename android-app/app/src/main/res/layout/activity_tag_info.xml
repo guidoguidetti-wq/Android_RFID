@@ -34,24 +34,14 @@
             android:gravity="center" />
 
         <Button
-            android:id="@+id/btnSettings"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:text="⚙"
-            android:textSize="16sp"
-            android:backgroundTint="#FF9800"
-            android:textColor="#FFFFFF"
-            android:padding="0dp"
-            android:layout_marginEnd="4dp" />
-
-        <Button
             android:id="@+id/btnClear"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Clear"
             android:textSize="12sp"
             android:backgroundTint="#F44336"
-            android:textColor="#FFFFFF" />
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="4dp" />
     </LinearLayout>
 
     <!-- Scan Control -->
