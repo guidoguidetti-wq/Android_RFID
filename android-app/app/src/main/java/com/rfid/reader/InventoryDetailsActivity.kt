@@ -1,5 +1,6 @@
 package com.rfid.reader
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -59,7 +60,13 @@ class InventoryDetailsActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = InventoryDetailsAdapter()
+        adapter = InventoryDetailsAdapter { item ->
+            val intent = Intent(this, RssiMonitorActivity::class.java).apply {
+                putExtra("TARGET_EPC", item.epc)
+                putExtra("AUTO_START", true)
+            }
+            startActivity(intent)
+        }
         binding.rvDetails.layoutManager = LinearLayoutManager(this)
         binding.rvDetails.adapter = adapter
     }
@@ -226,7 +233,9 @@ class InventoryDetailsActivity : AppCompatActivity() {
     }
 }
 
-class InventoryDetailsAdapter : RecyclerView.Adapter<InventoryDetailsAdapter.ViewHolder>() {
+class InventoryDetailsAdapter(
+    private val onItemClick: (InventoryItemDetail) -> Unit = {}
+) : RecyclerView.Adapter<InventoryDetailsAdapter.ViewHolder>() {
 
     private var items: List<InventoryItemDetail> = emptyList()
 
@@ -257,11 +266,14 @@ class InventoryDetailsAdapter : RecyclerView.Adapter<InventoryDetailsAdapter.Vie
 
     override fun getItemCount() = items.size
 
-    class ViewHolder(private val binding: ItemInventoryDetailBinding) :
+    inner class ViewHolder(private val binding: ItemInventoryDetailBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: InventoryItemDetail) {
             binding.tvProductId.text = item.product_id ?: "N/A"
+
+            // Tap sull'item → apre RSSI Monitor con l'EPC selezionato
+            binding.root.setOnClickListener { onItemClick(item) }
 
             // Abilita copia su click lungo per Product ID
             binding.tvProductId.setOnLongClickListener {

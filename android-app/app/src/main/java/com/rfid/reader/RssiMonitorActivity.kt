@@ -28,7 +28,8 @@ class RssiMonitorActivity : AppCompatActivity() {
             return
         }
 
-        android.util.Log.d(TAG, "Starting RSSI monitor for: $targetEpc")
+        val autoStart = intent.getBooleanExtra("AUTO_START", false)
+        android.util.Log.d(TAG, "Starting RSSI monitor for: $targetEpc (autoStart=$autoStart)")
 
         viewModel = ViewModelProvider(this)[RssiMonitorViewModel::class.java]
         viewModel.setTargetEpc(targetEpc)
@@ -37,7 +38,9 @@ class RssiMonitorActivity : AppCompatActivity() {
         setupObservers()
         setupListeners()
 
-        // Don't auto-start scan - operator must press trigger or button
+        if (autoStart) {
+            viewModel.startScan()
+        }
     }
 
     private fun setupUI() {
