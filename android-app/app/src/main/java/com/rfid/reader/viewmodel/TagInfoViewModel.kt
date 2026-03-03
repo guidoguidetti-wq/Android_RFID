@@ -57,6 +57,9 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     private val pendingBatch = mutableSetOf<String>()
     private var debounceJob: Job? = null
 
+    // Prevents cancellation of flushPendingBatch() while it is executing
+    private var isFlushing = false
+
     // Product labels loaded once at startup
     private var productLabels: Map<String, String> = emptyMap()
 
@@ -131,10 +134,24 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun scheduleDebounce() {
+        if (isFlushing) {
+            // A flush is already running; new EPCs stay in pendingBatch and will be
+            // picked up when the current flush completes (see finally block below).
+            return
+        }
         debounceJob?.cancel()
         debounceJob = viewModelScope.launch {
             delay(settingsManager.getTagInfoDelayMs())
-            flushPendingBatch()
+            isFlushing = true
+            try {
+                flushPendingBatch()
+            } finally {
+                isFlushing = false
+                // If new tags arrived while flushing, process them now
+                if (pendingBatch.isNotEmpty()) {
+                    scheduleDebounce()
+                }
+            }
         }
     }
 
@@ -156,6 +173,8 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                     try {
                         val resp = apiService.getItemByEpc(epc)
                         if (resp.isSuccessful) epc to resp.body() else epc to null
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         android.util.Log.e(TAG, "Error fetching item $epc", e)
                         epc to null
@@ -175,6 +194,8 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                     try {
                         val resp = apiService.getProductById(prodId)
                         if (resp.isSuccessful) prodId to resp.body() else prodId to null
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         prodId to null
                     }
@@ -268,6 +289,7 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearTags() {
         debounceJob?.cancel()
+        isFlushing = false
         rfidManager.clearTags()
         _foundTags.value = emptyList()
         _rawTagCount.value = 0
