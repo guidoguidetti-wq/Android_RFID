@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -51,45 +50,41 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d(TAG, "Tag reading mode set to: $mode")
         }
 
-        // Power SeekBar (10-300)
-        binding.seekBarPower.max = 290 // 300-10
-        binding.seekBarPower.progress = settingsManager.getReaderPower() - 10
+        // Power buttons (10-300, step 5)
         binding.tvPowerValue.text = settingsManager.getReaderPower().toString()
 
-        binding.seekBarPower.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val power = progress + 10
-                binding.tvPowerValue.text = power.toString()
-            }
+        binding.btnPowerMinus.setOnClickListener {
+            val current = settingsManager.getReaderPower()
+            val newVal = (current - 5).coerceAtLeast(10)
+            settingsManager.setReaderPower(newVal)
+            binding.tvPowerValue.text = newVal.toString()
+            android.util.Log.d(TAG, "Reader power set to: $newVal")
+        }
+        binding.btnPowerPlus.setOnClickListener {
+            val current = settingsManager.getReaderPower()
+            val newVal = (current + 5).coerceAtMost(300)
+            settingsManager.setReaderPower(newVal)
+            binding.tvPowerValue.text = newVal.toString()
+            android.util.Log.d(TAG, "Reader power set to: $newVal")
+        }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                val power = (seekBar?.progress ?: 0) + 10
-                settingsManager.setReaderPower(power)
-                android.util.Log.d(TAG, "Reader power set to: $power")
-            }
-        })
-
-        // RSSI SeekBar (-70 to -10)
-        binding.seekBarRssi.max = 60 // -10 - (-70)
-        binding.seekBarRssi.progress = settingsManager.getMinRssi() + 70
+        // RSSI buttons (-70 to -10, step 1)
         binding.tvRssiValue.text = settingsManager.getMinRssi().toString()
 
-        binding.seekBarRssi.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val rssi = progress - 70
-                binding.tvRssiValue.text = rssi.toString()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                val rssi = (seekBar?.progress ?: 0) - 70
-                settingsManager.setMinRssi(rssi)
-                android.util.Log.d(TAG, "Min RSSI set to: $rssi")
-            }
-        })
+        binding.btnRssiMinus.setOnClickListener {
+            val current = settingsManager.getMinRssi()
+            val newVal = (current - 1).coerceAtLeast(-70)
+            settingsManager.setMinRssi(newVal)
+            binding.tvRssiValue.text = newVal.toString()
+            android.util.Log.d(TAG, "Min RSSI set to: $newVal")
+        }
+        binding.btnRssiPlus.setOnClickListener {
+            val current = settingsManager.getMinRssi()
+            val newVal = (current + 1).coerceAtMost(-10)
+            settingsManager.setMinRssi(newVal)
+            binding.tvRssiValue.text = newVal.toString()
+            android.util.Log.d(TAG, "Min RSSI set to: $newVal")
+        }
 
         // EPC Prefix Filter
         binding.etEpcPrefix.setText(settingsManager.getEpcPrefixFilter())

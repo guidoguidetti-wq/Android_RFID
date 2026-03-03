@@ -94,70 +94,82 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_weight="1"
+                android:text="Power (10-300, step 5)"
+                android:textSize="16sp" />
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Power (10-300)"
-                    android:textSize="16sp" />
+            <Button
+                android:id="@+id/btnPowerMinus"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="−"
+                android:textSize="20sp"
+                android:padding="0dp" />
 
-                <TextView
-                    android:id="@+id/tvPowerValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="270"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <SeekBar
-                android:id="@+id/seekBarPower"
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvPowerValue"
+                android:layout_width="64dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
+                android:text="270"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <Button
+                android:id="@+id/btnPowerPlus"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="+"
+                android:textSize="20sp"
+                android:padding="0dp" />
         </LinearLayout>
 
         <!-- RSSI -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_weight="1"
+                android:text="Min RSSI (-70 to -10, step 1)"
+                android:textSize="16sp" />
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Min RSSI (-70 to -10)"
-                    android:textSize="16sp" />
+            <Button
+                android:id="@+id/btnRssiMinus"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="−"
+                android:textSize="20sp"
+                android:padding="0dp" />
 
-                <TextView
-                    android:id="@+id/tvRssiValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="-70"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <SeekBar
-                android:id="@+id/seekBarRssi"
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvRssiValue"
+                android:layout_width="64dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
+                android:text="-70"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <Button
+                android:id="@+id/btnRssiPlus"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="+"
+                android:textSize="20sp"
+                android:padding="0dp" />
         </LinearLayout>
 
         <!-- EPC Prefix Filter -->

@@ -181,9 +181,11 @@ class RFIDManager private constructor(private val context: Context) {
                 val config = reader.Config
                 // Antenna
                 val antennaConfig = config.Antennas.getAntennaRfConfig(1)
-                antennaConfig.setTransmitPowerIndex(270)
+                val power = settingsManager.getReaderPower()
+                antennaConfig.setTransmitPowerIndex(power)
                 antennaConfig.setrfModeTableIndex(0)
                 config.Antennas.setAntennaRfConfig(1, antennaConfig)
+                Log.d(TAG, "Antenna power set to: $power")
 
                 // Singulation (Session S0 per Geiger)
                 val singulationControl = config.Antennas.getSingulationControl(1)
