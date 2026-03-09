@@ -90,7 +90,16 @@
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1)",
       "Bash(cd \"C:/_RFID/Android_RFID/android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1)",
       "Bash(head:*)",
-      "Bash(vercel projects:*)"
+      "Bash(vercel projects:*)",
+      "Bash(PGPASSWORD='npg_BCdrof7vEPy1' psql:*)",
+      "Bash(\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\\\\bin\\\\java.exe\":*)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew assembleDebug:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files/Eclipse Adoptium/**)",
+      "Read(//c/Program Files/Microsoft/**)",
+      "Read(//c/Program Files/Amazon Corretto/**)",
+      "Bash(where java)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Eclipse Adoptium\\\\jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug:*)"
     ]
   }
 }
