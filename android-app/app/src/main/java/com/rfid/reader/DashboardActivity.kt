@@ -75,6 +75,12 @@ class DashboardActivity : AppCompatActivity() {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
         }
+
+        // Trasferimenti
+        binding.btnTransfers.setOnClickListener {
+            android.util.Log.d(TAG, "Navigating to TransfersActivity")
+            Toast.makeText(this, "Trasferimenti - coming soon", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showLogoutDialog() {
