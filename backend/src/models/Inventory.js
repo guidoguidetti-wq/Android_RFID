@@ -9,7 +9,7 @@ class Inventory {
   static async findOpenByPlace(placeId) {
     const result = await pool.query(
       `SELECT i.*,
-         (SELECT COUNT(*) FROM "inventory_items" WHERE int_inv_id = i.inv_id) as items_count
+         (SELECT COUNT(*) FROM "inventory_items" WHERE int_inv_id = i.inv_id AND (inv_lost = false OR inv_lost IS NULL)) as items_count
        FROM "inventories" i
        WHERE UPPER(i.inv_state) = 'OPEN' AND i.inv_place_id = $1
        ORDER BY i.inv_start_date DESC`,
@@ -27,7 +27,7 @@ class Inventory {
   static async findById(invId) {
     const result = await pool.query(
       `SELECT i.*,
-         (SELECT COUNT(*) FROM "inventory_items" WHERE int_inv_id = i.inv_id) as items_count
+         (SELECT COUNT(*) FROM "inventory_items" WHERE int_inv_id = i.inv_id AND (inv_lost = false OR inv_lost IS NULL)) as items_count
        FROM "inventories" i
        WHERE i.inv_id = $1`,
       [invId]
@@ -175,7 +175,7 @@ class Inventory {
   static async getAll(filters = {}) {
     let query = `
       SELECT i.*,
-        (SELECT COUNT(*) FROM "inventory_items" WHERE int_inv_id = i.inv_id) as items_count
+        (SELECT COUNT(*) FROM "inventory_items" WHERE int_inv_id = i.inv_id AND (inv_lost = false OR inv_lost IS NULL)) as items_count
       FROM "inventories" i
       WHERE 1=1
     `;

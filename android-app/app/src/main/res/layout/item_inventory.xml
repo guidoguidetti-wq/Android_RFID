@@ -40,7 +40,7 @@
                 android:id="@+id/tvInventoryDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="20.12.2025"
+                android:text="#8 • 20.12.2025"
                 android:textSize="14sp"
                 android:textColor="#666666"
                 android:layout_marginTop="4dp" />

@@ -228,15 +228,16 @@ class InventoryAdapter(
             binding.tvInventoryState.text = inventory.inv_state.uppercase()
             binding.tvInventoryCount.text = inventory.items_count.toString()
 
-            // Format date: "2025-12-20T10:30:00" -> "20.12.2025"
-            try {
+            // Format date: "2025-12-20T10:30:00" -> "#8 • 20.12.2025"
+            val formattedDate = try {
                 val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
                 val outputFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 val date = inputFormat.parse(inventory.inv_start_date)
-                binding.tvInventoryDate.text = date?.let { outputFormat.format(it) } ?: inventory.inv_start_date
+                date?.let { outputFormat.format(it) } ?: inventory.inv_start_date
             } catch (e: Exception) {
-                binding.tvInventoryDate.text = inventory.inv_start_date
+                inventory.inv_start_date
             }
+            binding.tvInventoryDate.text = "#${inventory.inv_id} • $formattedDate"
 
             // Color stato
             binding.tvInventoryState.setTextColor(
