@@ -1088,32 +1088,25 @@ exports.getExpectations = async (req, res) => {
       if (result.expectedItems.length > 0) {
         console.log(`Pre-populating lost items for Stock inventory ${invId}...`);
 
-        // Prima verifica quanti items esistono già
-        const existingResult = await pool.query(
-          `SELECT int_epc FROM "inventory_items" WHERE int_inv_id = $1`,
-          [invId]
-        );
-        const existingEpcs = new Set(existingResult.rows.map(r => r.int_epc));
-        console.log(`Found ${existingEpcs.size} existing items in inventory`);
+        // Singola query INSERT ... SELECT: inserisce in bulk solo gli EPC
+        // non ancora presenti in inventory_items per questo inventario
+        let insertQuery = `
+          INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+          SELECT $1, item_id, true, false, false
+          FROM "Items"
+          WHERE place_last = $2
+            AND item_id NOT IN (
+              SELECT int_epc FROM "inventory_items" WHERE int_inv_id = $1
+            )`;
+        const insertParams = [invId, lastPlace];
 
-        // Inserisci solo gli EPC attesi che non esistono già
-        let insertedCount = 0;
-        for (const epc of result.expectedItems) {
-          if (!existingEpcs.has(epc)) {
-            try {
-              await pool.query(
-                `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
-                 VALUES ($1, $2, true, false, false)`,
-                [invId, epc]
-              );
-              insertedCount++;
-            } catch (e) {
-              console.warn(`Could not insert lost item ${epc}:`, e.message);
-            }
-          }
+        if (lastZones.length > 0) {
+          insertQuery += ` AND zone_last = ANY($3)`;
+          insertParams.push(lastZones);
         }
 
-        console.log(`Pre-populated ${insertedCount} new lost items`);
+        const insertResult = await pool.query(insertQuery, insertParams);
+        console.log(`Pre-populated ${insertResult.rowCount} new lost items`);
       }
     }
     // Mode 3: Normal - no expectations
