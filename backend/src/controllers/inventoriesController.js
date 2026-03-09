@@ -603,15 +603,7 @@ exports.addScan = async (req, res) => {
       ignoredCount: Math.max(0, count - expectedCount - unexpectedCount - lostCount)
     };
 
-    // ✅ OTTIMIZZAZIONE: Usa inventory già caricato (linea 439) invece di ri-caricarlo
-    // Per checklist mode: calcola lost come totalExpected - expectedCount
-    const inventoryForLost = inventory || await Inventory.findById(invId);
-    if (inventoryForLost && inventoryForLost.inv_chk_id && inventoryForLost.inv_chk_id !== 0) {
-      // Ottieni totalExpected dalla checklist
-      const checklistProducts = await ChecklistProduct.getByChecklistId(inventoryForLost.inv_chk_id);
-      const totalExpected = checklistProducts.reduce((sum, p) => sum + (parseInt(p.ckp_qta) || 0), 0);
-      counters.lostCount = Math.max(0, totalExpected - counters.expectedCount);
-    }
+    // lost_count viene direttamente dal DB (items con inv_lost=true pre-popolati)
 
     res.json({
       success: true,
@@ -825,14 +817,14 @@ exports.addBatchScan = async (req, res) => {
       if (inc.expected > 0) {
         await pool.query(
           `UPDATE "checklist_products" SET ckp_qta_exp = ckp_qta_exp + $1
-           WHERE ckp_chk_id = $2 AND ckp_product_id = $3`,
+           WHERE ckp_chl_id = $2 AND ckp_product_id = $3`,
           [inc.expected, inventory.inv_chk_id, productId]
         );
       }
       if (inc.unexpected > 0) {
         await pool.query(
           `UPDATE "checklist_products" SET ckp_qta_unexp = ckp_qta_unexp + $1
-           WHERE ckp_chk_id = $2 AND ckp_product_id = $3`,
+           WHERE ckp_chl_id = $2 AND ckp_product_id = $3`,
           [inc.unexpected, inventory.inv_chk_id, productId]
         );
       }
@@ -859,12 +851,7 @@ exports.addBatchScan = async (req, res) => {
       ignoredCount:    Math.max(0, batchTotal - batchExpected - batchUnexpected - batchLost)
     };
 
-    // Per checklist: ricalcola lost come totalExpected - expectedCount
-    if (isChecklistMode) {
-      const updatedProducts = await ChecklistProduct.getByChecklistId(inventory.inv_chk_id);
-      const totalExpected = updatedProducts.reduce((sum, p) => sum + (parseInt(p.ckp_qta) || 0), 0);
-      counters.lostCount = Math.max(0, totalExpected - counters.expectedCount);
-    }
+    // lost_count viene direttamente dal DB (items con inv_lost=true pre-popolati)
 
     const processedCount = toInsertNew.length + toUpdateLost.length;
     console.log(`Batch scan complete: ${processedCount} items processed out of ${epcs.length} EPCs`);
@@ -950,19 +937,69 @@ exports.clearItems = async (req, res) => {
   try {
     const { invId } = req.params;
 
-    // ✅ Verifica se è un inventario Checklist e resetta i counter
     const inventory = await Inventory.findById(invId);
-    if (inventory && inventory.inv_chk_id && inventory.inv_chk_id !== 0) {
+    if (!inventory) {
+      return res.status(404).json({ error: 'Inventory not found' });
+    }
+
+    const isStockMode = inventory.inv_last === true;
+    const isChecklistMode = inventory.inv_chk_id && inventory.inv_chk_id !== 0;
+
+    // Resetta counter checklist prima di eliminare gli items
+    if (isChecklistMode) {
       console.log(`Clearing checklist inventory ${invId} - resetting checklist counters`);
       await ChecklistProduct.resetCounters(inventory.inv_chk_id);
     }
 
+    // Elimina TUTTI i record (compresi inv_lost=true)
     const removed = await InventoryItem.clearInventory(invId);
+    console.log(`Inventory ${invId} cleared: ${removed} items removed`);
+
+    // Ripopola con i lost in base alla modalità
+    let repopulated = 0;
+
+    if (isStockMode && inventory.inv_last_place) {
+      // Stock mode: ripopola da Items filtrati per place/zone
+      const lastPlace = inventory.inv_last_place;
+      const lastZones = inventory.inv_last_zones
+        ? inventory.inv_last_zones.split(/[;,]/).map(z => z.trim()).filter(z => z.length > 0)
+        : [];
+
+      let insertQuery = `
+        INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+        SELECT $1, item_id, true, false, false
+        FROM "Items"
+        WHERE place_last = $2`;
+      const insertParams = [invId, lastPlace];
+
+      if (lastZones.length > 0) {
+        insertQuery += ` AND zone_last = ANY($3)`;
+        insertParams.push(lastZones);
+      }
+
+      const insertResult = await pool.query(insertQuery, insertParams);
+      repopulated = insertResult.rowCount;
+      console.log(`Stock mode: re-populated ${repopulated} lost items`);
+
+    } else if (isChecklistMode) {
+      // Checklist mode: ripopola da Items i cui product_id sono nella checklist
+      const insertResult = await pool.query(
+        `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+         SELECT $1, i.item_id, true, false, false
+         FROM "Items" i
+         JOIN checklist_products cp ON cp.ckp_product_id = i.item_product_id
+         WHERE cp.ckp_chl_id = $2`,
+        [invId, inventory.inv_chk_id]
+      );
+      repopulated = insertResult.rowCount;
+      console.log(`Checklist mode: re-populated ${repopulated} lost items`);
+    }
 
     res.json({
       success: true,
       message: `Inventory cleared`,
-      itemsRemoved: removed
+      itemsRemoved: removed,
+      itemsRepopulated: repopulated
     });
   } catch (error) {
     console.error('Error clearing inventory:', error);
@@ -1039,12 +1076,21 @@ exports.getExpectations = async (req, res) => {
       const hasItems = parseInt(existingItemsCount.rows[0].cnt) > 0;
 
       if (!hasItems) {
-        console.log(`Checklist inventory ${invId} is empty - initializing checklist counters`);
-        // Azzera i counter e imposta Lost = Expected (ckp_qta_missing = ckp_qta)
+        console.log(`Checklist inventory ${invId} is empty - initializing checklist counters and pre-populating lost items`);
         await ChecklistProduct.resetCounters(inventory.inv_chk_id);
+
+        // Pre-popola inventory_items con tutti gli EPC dei prodotti in checklist come "lost"
+        const insertResult = await pool.query(
+          `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+           SELECT $1, i.item_id, true, false, false
+           FROM "Items" i
+           JOIN checklist_products cp ON cp.ckp_product_id = i.item_product_id
+           WHERE cp.ckp_chl_id = $2`,
+          [invId, inventory.inv_chk_id]
+        );
+        console.log(`Checklist: pre-populated ${insertResult.rowCount} lost items`);
       } else {
         console.log(`Checklist inventory ${invId} has ${existingItemsCount.rows[0].cnt} items - syncing checklist counters with real data`);
-        // ✅ Sincronizza i counter della checklist con i dati reali in inventory_items
         await ChecklistProduct.syncCountersWithInventory(inventory.inv_chk_id, invId);
       }
 

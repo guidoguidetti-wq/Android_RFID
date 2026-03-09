@@ -14,7 +14,7 @@ class ChecklistProduct {
     const result = await pool.query(
       `SELECT ckp_product_id, ckp_qta, ckp_qta_exp, ckp_qta_unexp, ckp_qta_missing
        FROM checklist_products
-       WHERE ckp_chk_id = $1`,
+       WHERE ckp_chl_id = $1`,
       [chkId]
     );
     return result.rows;
@@ -29,7 +29,7 @@ class ChecklistProduct {
     const result = await pool.query(
       `SELECT COALESCE(SUM(ckp_qta), 0) as total
        FROM checklist_products
-       WHERE ckp_chk_id = $1`,
+       WHERE ckp_chl_id = $1`,
       [chkId]
     );
     return parseInt(result.rows[0].total);
@@ -45,7 +45,7 @@ class ChecklistProduct {
     const result = await pool.query(
       `SELECT ckp_product_id, ckp_qta, ckp_qta_exp, ckp_qta_unexp, ckp_qta_missing
        FROM checklist_products
-       WHERE ckp_chk_id = $1 AND ckp_product_id = $2`,
+       WHERE ckp_chl_id = $1 AND ckp_product_id = $2`,
       [chkId, productId]
     );
     return result.rows[0] || null;
@@ -61,7 +61,7 @@ class ChecklistProduct {
     const result = await pool.query(
       `UPDATE checklist_products
        SET ckp_qta_exp = COALESCE(ckp_qta_exp, 0) + 1
-       WHERE ckp_chk_id = $1 AND ckp_product_id = $2
+       WHERE ckp_chl_id = $1 AND ckp_product_id = $2
        RETURNING *`,
       [chkId, productId]
     );
@@ -78,7 +78,7 @@ class ChecklistProduct {
     const result = await pool.query(
       `UPDATE checklist_products
        SET ckp_qta_unexp = COALESCE(ckp_qta_unexp, 0) + 1
-       WHERE ckp_chk_id = $1 AND ckp_product_id = $2
+       WHERE ckp_chl_id = $1 AND ckp_product_id = $2
        RETURNING *`,
       [chkId, productId]
     );
@@ -95,7 +95,7 @@ class ChecklistProduct {
     const result = await pool.query(
       `UPDATE checklist_products
        SET ckp_qta_missing = GREATEST(COALESCE(ckp_qta_missing, 0) - 1, 0)
-       WHERE ckp_chk_id = $1 AND ckp_product_id = $2
+       WHERE ckp_chl_id = $1 AND ckp_product_id = $2
        RETURNING *`,
       [chkId, productId]
     );
@@ -114,7 +114,7 @@ class ChecklistProduct {
        SET ckp_qta_exp = 0,
            ckp_qta_unexp = 0,
            ckp_qta_missing = ckp_qta
-       WHERE ckp_chk_id = $1`,
+       WHERE ckp_chl_id = $1`,
       [chkId]
     );
   }
@@ -137,7 +137,7 @@ class ChecklistProduct {
        FROM checklist_products cp
        LEFT JOIN "Items" i ON i.item_product_id = cp.ckp_product_id
        LEFT JOIN "inventory_items" ii ON ii.int_epc = i.item_id AND ii.int_inv_id = $2
-       WHERE cp.ckp_chk_id = $1
+       WHERE cp.ckp_chl_id = $1
        GROUP BY cp.ckp_product_id, cp.ckp_qta`,
       [chkId, invId]
     );
@@ -154,7 +154,7 @@ class ChecklistProduct {
          SET ckp_qta_exp = $1,
              ckp_qta_unexp = $2,
              ckp_qta_missing = $3
-         WHERE ckp_chk_id = $4 AND ckp_product_id = $5`,
+         WHERE ckp_chl_id = $4 AND ckp_product_id = $5`,
         [expected, unexpected, missing, chkId, row.ckp_product_id]
       );
     }

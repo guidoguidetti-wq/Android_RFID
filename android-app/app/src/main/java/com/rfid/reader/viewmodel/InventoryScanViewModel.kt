@@ -186,13 +186,12 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                         android.util.Log.d(TAG, "Normal mode loaded - Total: ${counters.total_count}, Validated: ${counters.expected_count}, Ignored: $ignoredFromDb")
                     }
                     "checklist" -> {
-                        // ✅ CHECKLIST MODE: Tutti i counter attivi
+                        // ✅ CHECKLIST MODE: lost_count da DB (pre-popolato come stock mode)
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = counters.unexpected_count
-                        // Lost = totalExpected - expected (calcolato dal backend)
-                        _lostCount.value = Math.max(0, totalExpected - counters.expected_count)
+                        _lostCount.value = counters.lost_count
                         _ignoredCount.value = ignoredFromDb
-                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${_lostCount.value}, Ignored: $ignoredFromDb")
+                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${counters.lost_count}, Ignored: $ignoredFromDb")
                     }
                     "last_place" -> {
                         // ✅ STOCK MODE: Logica esistente
