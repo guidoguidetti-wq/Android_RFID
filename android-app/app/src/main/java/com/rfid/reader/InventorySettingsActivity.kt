@@ -161,6 +161,8 @@ class InventorySettingsActivity : AppCompatActivity() {
             checkBoxes[field]?.isChecked = false
             editTexts[field]?.text?.clear()
             editTexts[field]?.isEnabled = false
+            settingsManager.setProductFilterEnabled(field, false)
+            settingsManager.setProductFilter(field, "")
         }
         binding.etBarcodeSearch.text?.clear()
         binding.tvBarcodeStatus.text = ""

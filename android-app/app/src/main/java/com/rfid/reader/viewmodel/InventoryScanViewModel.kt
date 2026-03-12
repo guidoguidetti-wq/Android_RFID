@@ -453,10 +453,10 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                             _ignoredCount.value = counters.ignoredCount
                         }
                     }
-                    // Pending si aggiorna DOPO la risposta: riflette solo i tag
-                    // arrivati mentre questa chiamata era in volo (0 se nessuno)
-                    _pendingCount.value = pendingBatch.size
                 }
+                // Pending si aggiorna DOPO la risposta (anche se counters==null):
+                // riflette solo i tag arrivati mentre questa chiamata era in volo (0 se nessuno)
+                _pendingCount.value = pendingBatch.size
             } else {
                 // Errore backend: i tag restano in scannedEpcs (counter non si azzera)
                 // L'utente vede il count corretto; i dati verranno salvati al prossimo retry manuale
