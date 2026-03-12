@@ -405,7 +405,8 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
         val batch = pendingBatch.toList()
         pendingBatch.clear()
-        _pendingCount.value = 0
+        // _pendingCount NON si azzera qui: i tag sono in volo verso il backend.
+        // Si aggiornerà dopo la risposta per riflettere eventuali nuovi tag arrivati nel frattempo.
         android.util.Log.d(TAG, "Flushing batch of ${batch.size} EPCs to inventory $currentInventoryId")
 
         try {
@@ -452,6 +453,9 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                             _ignoredCount.value = counters.ignoredCount
                         }
                     }
+                    // Pending si aggiorna DOPO la risposta: riflette solo i tag
+                    // arrivati mentre questa chiamata era in volo (0 se nessuno)
+                    _pendingCount.value = pendingBatch.size
                 }
             } else {
                 // Errore backend: i tag restano in scannedEpcs (counter non si azzera)

@@ -136,9 +136,10 @@ class InventorySettingsActivity : AppCompatActivity() {
             } else false
         }
 
-        // Barcode: apri fotocamera con ZXing
+        // Barcode: apri fotocamera con ZXing (portrait forzato via PortraitCaptureActivity)
         binding.btnScanBarcode.setOnClickListener {
             val integrator = IntentIntegrator(this)
+            integrator.setCaptureActivity(PortraitCaptureActivity::class.java)
             integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES)
             integrator.setPrompt("Scansiona il barcode prodotto")
             integrator.setBeepEnabled(true)
@@ -146,9 +147,23 @@ class InventorySettingsActivity : AppCompatActivity() {
             integrator.initiateScan()
         }
 
+        binding.btnResetFilters.setOnClickListener {
+            resetFilters()
+        }
+
         binding.btnSave.setOnClickListener {
             saveFilters()
         }
+    }
+
+    private fun resetFilters() {
+        filterFields.forEach { field ->
+            checkBoxes[field]?.isChecked = false
+            editTexts[field]?.text?.clear()
+            editTexts[field]?.isEnabled = false
+        }
+        binding.etBarcodeSearch.text?.clear()
+        binding.tvBarcodeStatus.text = ""
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -117,6 +117,15 @@
             android:label="Inventory Settings"
             android:parentActivityName=".InventoryScanActivity" />
 
+        <!-- ZXing barcode scanner forzato in portrait -->
+        <activity
+            android:name=".PortraitCaptureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:stateNotNeeded="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+
         <!-- Tag Info -->
         <activity
             android:name=".TagInfoActivity"
