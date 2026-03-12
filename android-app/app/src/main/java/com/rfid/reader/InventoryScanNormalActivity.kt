@@ -159,12 +159,8 @@ class InventoryScanNormalActivity : AppCompatActivity() {
 
         // Contatore Pending (tag letti ma non ancora confermati dal backend)
         viewModel.pendingCount.observe(this) { count ->
-            if (count > 0) {
-                binding.tvPendingAnnotation.visibility = android.view.View.VISIBLE
-                binding.tvPendingAnnotation.text = "$count pending • "
-            } else {
-                binding.tvPendingAnnotation.visibility = android.view.View.GONE
-            }
+            binding.tvPendingAnnotation.visibility = android.view.View.VISIBLE
+            binding.tvPendingAnnotation.text = "$count pending • "
         }
 
         // Stato connessione reader

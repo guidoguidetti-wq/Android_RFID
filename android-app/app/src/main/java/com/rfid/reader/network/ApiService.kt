@@ -1,5 +1,6 @@
 package com.rfid.reader.network
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -94,9 +95,9 @@ data class ProductResponse(
 )
 
 data class ProductLabelResponse(
-    val field_name: String,
-    val label_text: String?,
-    val label_id: Int? = null
+    @SerializedName("field_name") val field_name: String,
+    @SerializedName("label_text") val label_text: String?,
+    @SerializedName("label_id") val label_id: Int? = null
 )
 
 // Auth Models
