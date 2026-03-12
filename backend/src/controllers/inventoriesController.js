@@ -414,10 +414,12 @@ exports.addScan = async (req, res) => {
 
     // ========== NUOVA LOGICA: Distingue le 3 modalità ==========
 
-    // Determina modalità inventario
-    const isChecklistMode = inventory.inv_chk_id && inventory.inv_chk_id !== 0;
-    const isStockMode = inventory.inv_last === true;
-    const isNormalMode = !isChecklistMode && !isStockMode;
+    // Determina modalità inventario da inv_type (fallback su vecchia logica se null)
+    // 1=Stock, 2=Checklist(SKU), 3=Checklist(EPC) [non gestito], 4=Normal
+    const invType = inventory.inv_type;
+    const isChecklistMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const isStockMode    = invType ? invType === 1 : inventory.inv_last === true;
+    const isNormalMode   = !isChecklistMode && !isStockMode;
 
     console.log(`Inventory mode: ${isChecklistMode ? 'CHECKLIST' : isStockMode ? 'STOCK' : 'NORMAL'}`);
 
@@ -646,9 +648,11 @@ exports.addBatchScan = async (req, res) => {
       return res.status(404).json({ error: 'Inventory not found' });
     }
 
-    const isChecklistMode = inventory.inv_chk_id && inventory.inv_chk_id !== 0;
-    const isStockMode = inventory.inv_last === true;
-    const isNormalMode = !isChecklistMode && !isStockMode;
+    // Determina modalità inventario da inv_type (fallback su vecchia logica se null)
+    const invType = inventory.inv_type;
+    const isChecklistMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const isStockMode    = invType ? invType === 1 : inventory.inv_last === true;
+    const isNormalMode   = !isChecklistMode && !isStockMode;
 
     // ── 2. Carica items già presenti in inventory_items per questo batch (1 query) ──
     const existingResult = await pool.query(
@@ -942,8 +946,9 @@ exports.clearItems = async (req, res) => {
       return res.status(404).json({ error: 'Inventory not found' });
     }
 
-    const isStockMode = inventory.inv_last === true;
-    const isChecklistMode = inventory.inv_chk_id && inventory.inv_chk_id !== 0;
+    const invType = inventory.inv_type;
+    const isChecklistMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const isStockMode    = invType ? invType === 1 : inventory.inv_last === true;
 
     // Resetta counter checklist prima di eliminare gli items
     if (isChecklistMode) {

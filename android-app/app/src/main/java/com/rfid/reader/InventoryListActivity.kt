@@ -66,22 +66,39 @@ class InventoryListActivity : AppCompatActivity() {
             progressDialog.setCancelable(false)
             progressDialog.show()
 
-            // ✅ NUOVO: Determina modalità inventario e apri Activity corretta
-            val isChecklistMode = inventory.inv_chk_id != null && inventory.inv_chk_id != 0
-            val isStockMode = inventory.inv_last == true
-
-            val activityClass = when {
-                isChecklistMode -> {
-                    android.util.Log.d(TAG, "Opening CHECKLIST inventory: ${inventory.inv_id}")
-                    InventoryScanChecklistActivity::class.java
-                }
-                isStockMode -> {
+            // Determina modalità inventario da inv_type (fallback su vecchia logica se null)
+            // 1=Stock, 2=Checklist(SKU), 3=Checklist(EPC) [escluso], 4=Normal
+            val activityClass = when (inventory.inv_type) {
+                1 -> {
                     android.util.Log.d(TAG, "Opening STOCK inventory: ${inventory.inv_id}")
                     InventoryScanStockActivity::class.java
                 }
-                else -> {
+                2 -> {
+                    android.util.Log.d(TAG, "Opening CHECKLIST inventory: ${inventory.inv_id}")
+                    InventoryScanChecklistActivity::class.java
+                }
+                4 -> {
                     android.util.Log.d(TAG, "Opening NORMAL inventory: ${inventory.inv_id}")
                     InventoryScanNormalActivity::class.java
+                }
+                else -> {
+                    // Fallback su vecchia logica per inventari senza inv_type
+                    val isChecklistMode = inventory.inv_chk_id != null && inventory.inv_chk_id != 0
+                    val isStockMode = inventory.inv_last == true
+                    when {
+                        isChecklistMode -> {
+                            android.util.Log.d(TAG, "Opening CHECKLIST inventory (legacy): ${inventory.inv_id}")
+                            InventoryScanChecklistActivity::class.java
+                        }
+                        isStockMode -> {
+                            android.util.Log.d(TAG, "Opening STOCK inventory (legacy): ${inventory.inv_id}")
+                            InventoryScanStockActivity::class.java
+                        }
+                        else -> {
+                            android.util.Log.d(TAG, "Opening NORMAL inventory (legacy): ${inventory.inv_id}")
+                            InventoryScanNormalActivity::class.java
+                        }
+                    }
                 }
             }
 
@@ -238,6 +255,15 @@ class InventoryAdapter(
                 inventory.inv_start_date
             }
             binding.tvInventoryDate.text = "#${inventory.inv_id} • $formattedDate"
+
+            // inv_type: 1=From Place/Zones, 2=From Checklist(SKU), 3=From Checklist(EPC), 4=No Check
+            binding.tvInventoryType.text = when (inventory.inv_type) {
+                1 -> "From Place/Zones"
+                2 -> "From Checklist(SKU)"
+                3 -> "From Checklist(EPC)"
+                4 -> "No Check"
+                else -> ""
+            }
 
             // Color stato
             binding.tvInventoryState.setTextColor(

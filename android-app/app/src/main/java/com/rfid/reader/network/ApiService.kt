@@ -134,7 +134,8 @@ data class InventoryResponse(
     val inv_start_date: String,
     val items_count: Int,
     val inv_chk_id: Int? = 0,  // Per determinare modalità Checklist
-    val inv_last: Boolean? = false  // Per determinare modalità Stock
+    val inv_last: Boolean? = false,  // Per determinare modalità Stock
+    val inv_type: Int? = null  // 1=From Place/Zones, 2=From Checklist(SKU), 3=From Checklist(EPC), 4=No Check
 )
 
 data class InventoryDetailResponse(

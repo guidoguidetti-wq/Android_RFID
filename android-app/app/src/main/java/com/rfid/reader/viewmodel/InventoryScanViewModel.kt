@@ -55,6 +55,10 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
     private val _ignoredCount = MutableLiveData<Int>(0)
     val ignoredCount: LiveData<Int> = _ignoredCount
 
+    // Tag letti ma non ancora confermati dal backend (in pendingBatch o risposta in transito)
+    private val _pendingCount = MutableLiveData<Int>(0)
+    val pendingCount: LiveData<Int> = _pendingCount
+
     // Modalità inventario: "normal", "checklist", "last_place" (stock)
     private var inventoryMode: String = "normal"
 
@@ -380,6 +384,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
         // Accoda nel buffer batch
         pendingBatch.add(epc)
+        _pendingCount.value = pendingBatch.size
 
         // Annulla il debounce precedente e riparte
         batchJob?.cancel()
@@ -400,6 +405,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
         val batch = pendingBatch.toList()
         pendingBatch.clear()
+        _pendingCount.value = 0
         android.util.Log.d(TAG, "Flushing batch of ${batch.size} EPCs to inventory $currentInventoryId")
 
         try {
