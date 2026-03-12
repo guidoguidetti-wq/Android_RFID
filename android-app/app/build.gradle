@@ -81,6 +81,9 @@ dependencies {
     // Zebra RFID SDK 2.0.5.226 - TUTTI i moduli (come nell'app di esempio Zebra)
     implementation fileTree(dir: 'libs', include: ['*.aar'])
 
+    // Barcode scanner (ZXing)
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+
     // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

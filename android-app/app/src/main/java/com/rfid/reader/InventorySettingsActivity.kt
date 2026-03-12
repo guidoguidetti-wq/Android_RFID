@@ -1,13 +1,17 @@
 package com.rfid.reader
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.zxing.integration.android.IntentIntegrator
 import com.rfid.reader.databinding.ActivityInventorySettingsBinding
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.utils.SettingsManager
@@ -122,8 +126,81 @@ class InventorySettingsActivity : AppCompatActivity() {
             }
         }
 
+        // Barcode: cerca prodotto alla pressione di "Search" sulla tastiera
+        binding.etBarcodeSearch.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+                (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+                val barcode = binding.etBarcodeSearch.text.toString().trim()
+                if (barcode.isNotEmpty()) searchProductByBarcode(barcode)
+                true
+            } else false
+        }
+
+        // Barcode: apri fotocamera con ZXing
+        binding.btnScanBarcode.setOnClickListener {
+            val integrator = IntentIntegrator(this)
+            integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES)
+            integrator.setPrompt("Scansiona il barcode prodotto")
+            integrator.setBeepEnabled(true)
+            integrator.setBarcodeImageEnabled(false)
+            integrator.initiateScan()
+        }
+
         binding.btnSave.setOnClickListener {
             saveFilters()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
+        if (result != null) {
+            if (result.contents != null) {
+                binding.etBarcodeSearch.setText(result.contents)
+                searchProductByBarcode(result.contents)
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    private fun searchProductByBarcode(barcode: String) {
+        binding.tvBarcodeStatus.setTextColor(getColor(android.R.color.darker_gray))
+        binding.tvBarcodeStatus.text = "Ricerca in corso..."
+
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getProductById(barcode)
+                if (response.isSuccessful) {
+                    val product = response.body()
+                    if (product != null) {
+                        // Popola i 3 filtri con i valori del prodotto e attiva i flag
+                        val fieldsToFill = mapOf(
+                            "fld01" to product.fld01,
+                            "fld02" to product.fld02,
+                            "fld03" to product.fld03
+                        )
+                        fieldsToFill.forEach { (field, value) ->
+                            if (!value.isNullOrEmpty()) {
+                                editTexts[field]?.setText(value)
+                                checkBoxes[field]?.isChecked = true
+                                editTexts[field]?.isEnabled = true
+                            }
+                        }
+                        binding.tvBarcodeStatus.setTextColor(getColor(android.R.color.holo_green_dark))
+                        binding.tvBarcodeStatus.text = "Prodotto trovato: ${product.product_id}"
+                    } else {
+                        binding.tvBarcodeStatus.setTextColor(getColor(android.R.color.holo_red_dark))
+                        binding.tvBarcodeStatus.text = "Prodotto non trovato: $barcode"
+                    }
+                } else {
+                    binding.tvBarcodeStatus.setTextColor(getColor(android.R.color.holo_red_dark))
+                    binding.tvBarcodeStatus.text = "Prodotto non trovato: $barcode"
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error searching product by barcode", e)
+                binding.tvBarcodeStatus.setTextColor(getColor(android.R.color.holo_red_dark))
+                binding.tvBarcodeStatus.text = "Errore: ${e.message}"
+            }
         }
     }
 
