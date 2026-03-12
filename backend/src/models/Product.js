@@ -21,7 +21,7 @@ class Product {
   // Get product labels (field metadata)
   static async getLabels() {
     const result = await pool.query(
-      'SELECT * FROM "Products_labels" ORDER BY pr_fld'
+      'SELECT * FROM "Products_labels" ORDER BY field_name'
     );
     return result.rows;
   }

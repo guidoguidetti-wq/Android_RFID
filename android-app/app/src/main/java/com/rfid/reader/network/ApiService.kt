@@ -94,9 +94,9 @@ data class ProductResponse(
 )
 
 data class ProductLabelResponse(
-    val pr_fld: String,
-    val pr_lab: String?,
-    val pr_des: String?
+    val field_name: String,
+    val label_text: String?,
+    val label_id: Int? = null
 )
 
 // Auth Models

@@ -84,8 +84,8 @@ class InventorySettingsActivity : AppCompatActivity() {
 
                     // Aggiorna le label con i nomi dal database
                     labelsData.forEach { labelData ->
-                        val field = labelData.pr_fld
-                        val labelText = labelData.pr_lab ?: field
+                        val field = labelData.field_name
+                        val labelText = labelData.label_text ?: field
                         labels[field]?.text = labelText
                     }
                 } else {

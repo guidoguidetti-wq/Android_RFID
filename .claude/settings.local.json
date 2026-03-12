@@ -99,7 +99,8 @@
       "Read(//c/Program Files/Microsoft/**)",
       "Read(//c/Program Files/Amazon Corretto/**)",
       "Bash(where java)",
-      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Eclipse Adoptium\\\\jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug:*)"
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Eclipse Adoptium\\\\jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug:*)",
+      "Bash(PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d rfid_db -c \"\\\\d \\\\\"Products_labels\\\\\"\" 2>&1)"
     ]
   }
 }

@@ -30,7 +30,7 @@ class TagDetailViewModel(application: Application) : AndroidViewModel(applicatio
                 // 1. Load Labels
                 val labelsResp = apiService.getProductLabels()
                 if (labelsResp.isSuccessful) {
-                    val labelMap = labelsResp.body()?.associate { it.pr_fld to (it.pr_lab ?: it.pr_fld) } ?: emptyMap()
+                    val labelMap = labelsResp.body()?.associate { it.field_name to (it.label_text ?: it.field_name) } ?: emptyMap()
                     _labels.value = labelMap
                 }
 

@@ -74,7 +74,7 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                 val response = apiService.getProductLabels()
                 if (response.isSuccessful) {
                     productLabels = response.body()
-                        ?.associate { it.pr_fld to (it.pr_lab ?: it.pr_fld) }
+                        ?.associate { it.field_name to (it.label_text ?: it.field_name) }
                         ?: emptyMap()
                     android.util.Log.d(TAG, "Loaded ${productLabels.size} product labels")
                 }

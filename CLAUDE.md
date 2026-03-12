@@ -233,9 +233,9 @@ vercel logs
 - `fldd01-fldd10`: TEXT - Campi dati descrittivi
 
 **Products_labels** (5 rows): Metadati campi prodotti
-- `pr_fld` (PK): VARCHAR - Nome campo (es. "fld01")
-- `pr_lab`: VARCHAR - Label visualizzata
-- `pr_des`: TEXT - Descrizione campo
+- `label_id` (PK): INTEGER - ID auto-increment
+- `field_name`: VARCHAR - Nome campo (es. "fld01", "fld02", "fld03", "fldd01")
+- `label_text`: VARCHAR - Label visualizzata (es. "Style", "Color", "Size")
 
 **people** (2 rows): Persone associate a tag
 - `id_people` (PK): INTEGER
