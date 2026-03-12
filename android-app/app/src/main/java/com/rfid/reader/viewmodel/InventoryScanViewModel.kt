@@ -372,14 +372,13 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
         beepHelper.playBeep()
         android.util.Log.d(TAG, "Tag $epc - immediate counter → ${currentTotal + 1}")
 
-        // Normal mode: in mode_b/mode_c tutti i tag sono expected → incrementa subito.
-        // In mode_a non sappiamo se il tag è censito finché il backend non risponde:
-        // expected/ignored verranno aggiornati da flushBatch().
+        // Normal mode: aggiornamento ottimistico immediato per tutti i scan mode.
+        // In mode_b/mode_c ogni tag è expected per definizione.
+        // In mode_a non sappiamo ancora se il tag è censito, ma incrementiamo subito
+        // per feedback immediato: il backend sovrascriverà con il valore corretto
+        // (possibile lieve correzione verso il basso se alcuni tag sono filtered/ignored).
         if (inventoryMode == "normal") {
-            val scanMode = settingsManager.getTagReadingMode()
-            if (scanMode == "mode_b" || scanMode == "mode_c") {
-                _expectedCount.value = (_expectedCount.value ?: 0) + 1
-            }
+            _expectedCount.value = (_expectedCount.value ?: 0) + 1
         }
 
         // Accoda nel buffer batch
