@@ -190,12 +190,15 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                         android.util.Log.d(TAG, "Normal mode loaded - Total: ${counters.total_count}, Validated: ${counters.expected_count}, Ignored: $ignoredFromDb")
                     }
                     "checklist" -> {
-                        // ✅ CHECKLIST MODE: lost_count da DB (pre-popolato come stock mode)
+                        // CHECKLIST MODE: lost calcolato client-side = totalExpected - expected
+                        // ignoredFromDb usa lost_count dal DB (esclude record inv_lost=true da vecchi dati)
+                        val checklistLost = Math.max(0, totalExpected - counters.expected_count)
+                        val checklistIgnored = Math.max(0, counters.total_count - counters.expected_count - counters.unexpected_count - counters.lost_count)
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = counters.unexpected_count
-                        _lostCount.value = counters.lost_count
-                        _ignoredCount.value = ignoredFromDb
-                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${counters.lost_count}, Ignored: $ignoredFromDb")
+                        _lostCount.value = checklistLost
+                        _ignoredCount.value = checklistIgnored
+                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: $checklistLost, Ignored: $checklistIgnored")
                     }
                     "last_place" -> {
                         // ✅ STOCK MODE: Logica esistente
@@ -438,12 +441,21 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                             _ignoredCount.value = counters.ignoredCount
                             android.util.Log.d(TAG, "Normal - Validated: ${counters.expectedCount}, Ignored: ${counters.ignoredCount}")
                         }
-                        "checklist", "last_place" -> {
+                        "checklist" -> {
+                            // lostCount calcolato client-side = totalExpected - expected
+                            val newLost = Math.max(0, (_totalExpectedLive.value ?: 0) - counters.expectedCount)
+                            _expectedCount.value = counters.expectedCount
+                            _unexpectedCount.value = counters.unexpectedCount
+                            _lostCount.value = newLost
+                            _ignoredCount.value = counters.ignoredCount
+                            android.util.Log.d(TAG, "Checklist - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: $newLost, Ignored: ${counters.ignoredCount}")
+                        }
+                        "last_place" -> {
                             _expectedCount.value = counters.expectedCount
                             _unexpectedCount.value = counters.unexpectedCount
                             _lostCount.value = counters.lostCount
                             _ignoredCount.value = counters.ignoredCount
-                            android.util.Log.d(TAG, "Mode $inventoryMode - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}, Ignored: ${counters.ignoredCount}")
+                            android.util.Log.d(TAG, "Stock - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}, Ignored: ${counters.ignoredCount}")
                         }
                         else -> {
                             _expectedCount.value = counters.expectedCount
@@ -550,6 +562,12 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
      */
     suspend fun clearInventory() {
         try {
+            // Cancella batch pendenti prima di svuotare l'inventario
+            batchJob?.cancel()
+            batchJob = null
+            pendingBatch.clear()
+            _pendingCount.postValue(0)
+
             val response = apiService.clearInventory(currentInventoryId)
 
             if (response.success) {

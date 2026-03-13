@@ -161,10 +161,6 @@ exports.getCounters = async (req, res) => {
 
     console.log(`Fetching counters for inventory ${invId}`);
 
-    const inventory = await Inventory.findById(invId);
-    const invType = inventory ? inventory.inv_type : null;
-    const isChecklistMode = invType ? invType === 2 : !!(inventory && inventory.inv_chk_id && inventory.inv_chk_id !== 0);
-
     const result = await pool.query(
       `SELECT
         COUNT(*) as total_count,
@@ -176,20 +172,11 @@ exports.getCounters = async (req, res) => {
       [invId]
     );
 
-    const expectedCount = parseInt(result.rows[0].expected_count) || 0;
-    let lostCount = parseInt(result.rows[0].lost_count) || 0;
-
-    // Per checklist: lost = totalExpected - expected (non ci sono record inv_lost=true)
-    if (isChecklistMode && inventory) {
-      const totalExpected = await ChecklistProduct.getTotalQuantity(inventory.inv_chk_id);
-      lostCount = Math.max(0, totalExpected - expectedCount);
-    }
-
     const counters = {
       total_count: parseInt(result.rows[0].total_count) || 0,
-      expected_count: expectedCount,
+      expected_count: parseInt(result.rows[0].expected_count) || 0,
       unexpected_count: parseInt(result.rows[0].unexpected_count) || 0,
-      lost_count: lostCount
+      lost_count: parseInt(result.rows[0].lost_count) || 0
     };
 
     res.json(counters);
@@ -599,23 +586,16 @@ exports.addScan = async (req, res) => {
       [invId]
     );
 
-    const count = parseInt(countersResult.rows[0].total_count) || 0;
-    const expectedCount   = parseInt(countersResult.rows[0].expected_count)   || 0;
+    const count         = parseInt(countersResult.rows[0].total_count)       || 0;
+    const expectedCount = parseInt(countersResult.rows[0].expected_count)   || 0;
     const unexpectedCount = parseInt(countersResult.rows[0].unexpected_count) || 0;
-    const dbLostCount     = parseInt(countersResult.rows[0].lost_count)       || 0;
-
-    // Per checklist: lost = totalExpected - expected (non ci sono record inv_lost=true)
-    let lostCount = dbLostCount;
-    if (isChecklistMode) {
-      const totalExpected = await ChecklistProduct.getTotalQuantity(inventory.inv_chk_id);
-      lostCount = Math.max(0, totalExpected - expectedCount);
-    }
+    const lostCount     = parseInt(countersResult.rows[0].lost_count)       || 0;
 
     const counters = {
       expectedCount,
       unexpectedCount,
       lostCount,
-      ignoredCount: Math.max(0, count - expectedCount - unexpectedCount - dbLostCount)
+      ignoredCount: Math.max(0, count - expectedCount - unexpectedCount - lostCount)
     };
 
     res.json({
@@ -861,21 +841,14 @@ exports.addBatchScan = async (req, res) => {
 
     const batchExpected   = parseInt(countersResult.rows[0].expected_count)   || 0;
     const batchUnexpected = parseInt(countersResult.rows[0].unexpected_count) || 0;
-    const batchDbLost     = parseInt(countersResult.rows[0].lost_count)       || 0;
+    const batchLost       = parseInt(countersResult.rows[0].lost_count)       || 0;
     const batchTotal      = parseInt(countersResult.rows[0].total_count)      || 0;
-
-    // Per checklist: lost = totalExpected - expected (non ci sono record inv_lost=true)
-    let batchLost = batchDbLost;
-    if (isChecklistMode) {
-      const totalExpected = await ChecklistProduct.getTotalQuantity(inventory.inv_chk_id);
-      batchLost = Math.max(0, totalExpected - batchExpected);
-    }
 
     const counters = {
       expectedCount:   batchExpected,
       unexpectedCount: batchUnexpected,
       lostCount:       batchLost,
-      ignoredCount:    Math.max(0, batchTotal - batchExpected - batchUnexpected - batchDbLost)
+      ignoredCount:    Math.max(0, batchTotal - batchExpected - batchUnexpected - batchLost)
     };
 
     const processedCount = toInsertNew.length + toUpdateLost.length;
