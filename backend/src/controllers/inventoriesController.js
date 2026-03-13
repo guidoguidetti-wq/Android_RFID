@@ -161,6 +161,10 @@ exports.getCounters = async (req, res) => {
 
     console.log(`Fetching counters for inventory ${invId}`);
 
+    const inventory = await Inventory.findById(invId);
+    const invType = inventory ? inventory.inv_type : null;
+    const isChecklistMode = invType ? invType === 2 : !!(inventory && inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+
     const result = await pool.query(
       `SELECT
         COUNT(*) as total_count,
@@ -172,11 +176,20 @@ exports.getCounters = async (req, res) => {
       [invId]
     );
 
+    const expectedCount = parseInt(result.rows[0].expected_count) || 0;
+    let lostCount = parseInt(result.rows[0].lost_count) || 0;
+
+    // Per checklist: lost = totalExpected - expected (non ci sono record inv_lost=true)
+    if (isChecklistMode && inventory) {
+      const totalExpected = await ChecklistProduct.getTotalQuantity(inventory.inv_chk_id);
+      lostCount = Math.max(0, totalExpected - expectedCount);
+    }
+
     const counters = {
       total_count: parseInt(result.rows[0].total_count) || 0,
-      expected_count: parseInt(result.rows[0].expected_count) || 0,
+      expected_count: expectedCount,
       unexpected_count: parseInt(result.rows[0].unexpected_count) || 0,
-      lost_count: parseInt(result.rows[0].lost_count) || 0
+      lost_count: lostCount
     };
 
     res.json(counters);
@@ -492,51 +505,43 @@ exports.addScan = async (req, res) => {
     }
     // ========== MODALITÀ CHECKLIST ==========
     else if (isChecklistMode) {
-      // Ignora mode setting - sempre "Solo Censiti"
-      // Counter principale: tutti i tag scannerizzati
-      // Expected: tag che matchano checklist e non superano ckp_qta
-      // Unexpected: tag che non matchano checklist o superano ckp_qta
-      // Lost: totalExpected - expected (calcolato lato client)
+      console.log(`Checklist mode: Processing EPC ${epc}`);
 
-      console.log(`Checklist mode: Processing EPC ${epc} (ignoring mode setting)`);
-
-      // 1. Recupera productId dall'item
+      // 1. Verifica se EPC è censito in Items - se non trovato, ignora
       const itemData = await Item.findByEpc(epc);
-      if (itemData) {
+      if (!itemData) {
+        console.log(`Checklist: EPC ${epc} NOT in Items - IGNORED`);
+        shouldAddToInventory = false;
+      } else {
         productId = itemData.item_product_id || null;
-      }
+        shouldAddToInventory = true;
 
-      shouldAddToInventory = true;  // Sempre aggiungi a inventory_items
+        // 2. Verifica se product in checklist_products
+        if (productId) {
+          const checklistProduct = await ChecklistProduct.findProductInChecklist(inventory.inv_chk_id, productId);
 
-      // 2. Verifica se product in checklist_products
-      if (productId) {
-        const checklistProduct = await ChecklistProduct.findProductInChecklist(inventory.inv_chk_id, productId);
+          if (checklistProduct) {
+            const currentQtaExp = parseInt(checklistProduct.ckp_qta_exp) || 0;
+            const expectedQta = parseInt(checklistProduct.ckp_qta) || 0;
 
-        if (checklistProduct) {
-          const currentQtaExp = parseInt(checklistProduct.ckp_qta_exp) || 0;
-          const expectedQta = parseInt(checklistProduct.ckp_qta) || 0;
-
-          // 3. Verifica se ckp_qta_exp + 1 <= ckp_qta
-          if (currentQtaExp + 1 <= expectedQta) {
-            // Expected: incrementa ckp_qta_exp, scrivi con inv_expected = true
-            console.log(`Checklist: Product ${productId} matched (${currentQtaExp + 1}/${expectedQta}) - EXPECTED`);
-            await ChecklistProduct.incrementExpected(inventory.inv_chk_id, productId);
-            calculatedStatus = 'expected';
+            if (currentQtaExp + 1 <= expectedQta) {
+              console.log(`Checklist: Product ${productId} matched (${currentQtaExp + 1}/${expectedQta}) - EXPECTED`);
+              await ChecklistProduct.incrementExpected(inventory.inv_chk_id, productId);
+              calculatedStatus = 'expected';
+            } else {
+              console.log(`Checklist: Product ${productId} exceeded (${currentQtaExp + 1}/${expectedQta}) - UNEXPECTED`);
+              await ChecklistProduct.incrementUnexpected(inventory.inv_chk_id, productId);
+              calculatedStatus = 'unexpected';
+            }
           } else {
-            // Unexpected: quantità superata
-            console.log(`Checklist: Product ${productId} exceeded (${currentQtaExp + 1}/${expectedQta}) - UNEXPECTED`);
-            await ChecklistProduct.incrementUnexpected(inventory.inv_chk_id, productId);
+            console.log(`Checklist: Product ${productId} NOT in checklist - UNEXPECTED`);
             calculatedStatus = 'unexpected';
           }
         } else {
-          // Unexpected: prodotto non in checklist
-          console.log(`Checklist: Product ${productId} NOT in checklist - UNEXPECTED`);
+          // In Items ma senza productId associato
+          console.log(`Checklist: EPC ${epc} has no productId - UNEXPECTED`);
           calculatedStatus = 'unexpected';
         }
-      } else {
-        // Unexpected: nessun productId associato
-        console.log(`Checklist: EPC ${epc} has no productId - UNEXPECTED`);
-        calculatedStatus = 'unexpected';
       }
     }
     // ========== MODALITÀ STOCK (Last-Place) ==========
@@ -595,17 +600,23 @@ exports.addScan = async (req, res) => {
     );
 
     const count = parseInt(countersResult.rows[0].total_count) || 0;
-    const expectedCount  = parseInt(countersResult.rows[0].expected_count)   || 0;
-    const unexpectedCount= parseInt(countersResult.rows[0].unexpected_count) || 0;
-    const lostCount      = parseInt(countersResult.rows[0].lost_count)       || 0;
+    const expectedCount   = parseInt(countersResult.rows[0].expected_count)   || 0;
+    const unexpectedCount = parseInt(countersResult.rows[0].unexpected_count) || 0;
+    const dbLostCount     = parseInt(countersResult.rows[0].lost_count)       || 0;
+
+    // Per checklist: lost = totalExpected - expected (non ci sono record inv_lost=true)
+    let lostCount = dbLostCount;
+    if (isChecklistMode) {
+      const totalExpected = await ChecklistProduct.getTotalQuantity(inventory.inv_chk_id);
+      lostCount = Math.max(0, totalExpected - expectedCount);
+    }
+
     const counters = {
       expectedCount,
       unexpectedCount,
       lostCount,
-      ignoredCount: Math.max(0, count - expectedCount - unexpectedCount - lostCount)
+      ignoredCount: Math.max(0, count - expectedCount - unexpectedCount - dbLostCount)
     };
-
-    // lost_count viene direttamente dal DB (items con inv_lost=true pre-popolati)
 
     res.json({
       success: true,
@@ -615,7 +626,7 @@ exports.addScan = async (req, res) => {
       epc: epc,
       productId: productId,
       status: calculatedStatus,
-      counters: counters  // NUOVO: contatori aggiornati
+      counters: counters
     });
   } catch (error) {
     console.error('Error adding scan:', error);
@@ -755,7 +766,10 @@ exports.addBatchScan = async (req, res) => {
           calculatedStatus = 'expected';
         }
       } else if (isChecklistMode) {
-        if (productId && checklistProductsMap && checklistProductsMap.has(productId)) {
+        if (!itemData) {
+          // EPC non censito in Items → ignora, non scrivere in inventory_items
+          shouldAdd = false;
+        } else if (productId && checklistProductsMap && checklistProductsMap.has(productId)) {
           const prod = checklistProductsMap.get(productId);
           const inc = checklistIncrements.get(productId) || { expected: 0, unexpected: 0 };
           const currentExpTotal = prod.ckp_qta_exp + inc.expected;
@@ -768,6 +782,7 @@ exports.addBatchScan = async (req, res) => {
           }
           checklistIncrements.set(productId, inc);
         } else {
+          // In Items ma prodotto non in checklist (o nessun productId)
           calculatedStatus = 'unexpected';
         }
       } else if (isStockMode) {
@@ -846,16 +861,22 @@ exports.addBatchScan = async (req, res) => {
 
     const batchExpected   = parseInt(countersResult.rows[0].expected_count)   || 0;
     const batchUnexpected = parseInt(countersResult.rows[0].unexpected_count) || 0;
-    const batchLost       = parseInt(countersResult.rows[0].lost_count)       || 0;
+    const batchDbLost     = parseInt(countersResult.rows[0].lost_count)       || 0;
     const batchTotal      = parseInt(countersResult.rows[0].total_count)      || 0;
+
+    // Per checklist: lost = totalExpected - expected (non ci sono record inv_lost=true)
+    let batchLost = batchDbLost;
+    if (isChecklistMode) {
+      const totalExpected = await ChecklistProduct.getTotalQuantity(inventory.inv_chk_id);
+      batchLost = Math.max(0, totalExpected - batchExpected);
+    }
+
     const counters = {
       expectedCount:   batchExpected,
       unexpectedCount: batchUnexpected,
       lostCount:       batchLost,
-      ignoredCount:    Math.max(0, batchTotal - batchExpected - batchUnexpected - batchLost)
+      ignoredCount:    Math.max(0, batchTotal - batchExpected - batchUnexpected - batchDbLost)
     };
-
-    // lost_count viene direttamente dal DB (items con inv_lost=true pre-popolati)
 
     const processedCount = toInsertNew.length + toUpdateLost.length;
     console.log(`Batch scan complete: ${processedCount} items processed out of ${epcs.length} EPCs`);
@@ -987,17 +1008,8 @@ exports.clearItems = async (req, res) => {
       console.log(`Stock mode: re-populated ${repopulated} lost items`);
 
     } else if (isChecklistMode) {
-      // Checklist mode: ripopola da Items i cui product_id sono nella checklist
-      const insertResult = await pool.query(
-        `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
-         SELECT $1, i.item_id, true, false, false
-         FROM "Items" i
-         JOIN checklist_products cp ON cp.ckp_product_id = i.item_product_id
-         WHERE cp.ckp_chl_id = $2`,
-        [invId, inventory.inv_chk_id]
-      );
-      repopulated = insertResult.rowCount;
-      console.log(`Checklist mode: re-populated ${repopulated} lost items`);
+      // Checklist mode: niente pre-popolamento, Lost = totalExpected - expected (calcolato dinamicamente)
+      console.log(`Checklist mode: cleared, no pre-population needed`);
     }
 
     res.json({
@@ -1081,19 +1093,8 @@ exports.getExpectations = async (req, res) => {
       const hasItems = parseInt(existingItemsCount.rows[0].cnt) > 0;
 
       if (!hasItems) {
-        console.log(`Checklist inventory ${invId} is empty - initializing checklist counters and pre-populating lost items`);
+        console.log(`Checklist inventory ${invId} is empty - initializing checklist counters`);
         await ChecklistProduct.resetCounters(inventory.inv_chk_id);
-
-        // Pre-popola inventory_items con tutti gli EPC dei prodotti in checklist come "lost"
-        const insertResult = await pool.query(
-          `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
-           SELECT $1, i.item_id, true, false, false
-           FROM "Items" i
-           JOIN checklist_products cp ON cp.ckp_product_id = i.item_product_id
-           WHERE cp.ckp_chl_id = $2`,
-          [invId, inventory.inv_chk_id]
-        );
-        console.log(`Checklist: pre-populated ${insertResult.rowCount} lost items`);
       } else {
         console.log(`Checklist inventory ${invId} has ${existingItemsCount.rows[0].cnt} items - syncing checklist counters with real data`);
         await ChecklistProduct.syncCountersWithInventory(inventory.inv_chk_id, invId);
