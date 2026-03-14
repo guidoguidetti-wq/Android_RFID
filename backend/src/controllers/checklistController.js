@@ -71,8 +71,8 @@ exports.createFromScan = async (req, res) => {
 
     // Inserisce la checklist
     const chkResult = await pool.query(
-      `INSERT INTO checklist (chk_code, chk_type, chk_place, chk_notes, chk_creationdate)
-       VALUES ($1, 'EPC', $2, $3, CURRENT_DATE) RETURNING chk_id`,
+      `INSERT INTO checklist (chk_code, chk_place, chk_notes, chk_creationdate)
+       VALUES ($1, $2, $3, CURRENT_DATE) RETURNING chk_id`,
       [chk_code, chk_place, chk_notes || null]
     );
     const chk_id = chkResult.rows[0].chk_id;

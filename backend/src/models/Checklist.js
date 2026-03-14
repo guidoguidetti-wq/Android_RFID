@@ -7,14 +7,12 @@ class Checklist {
    * @returns {Promise<Array>} Lista checklist
    */
   static async findByType(chkType) {
+    // chk_type non esiste nella tabella reale - restituisce tutte
     const result = await pool.query(
       `SELECT chk_id, chk_code, chk_place, chk_zone, chk_notes, chk_creationdate
        FROM checklist
-       WHERE chk_type = $1
-       ORDER BY chk_code`,
-      [chkType]
+       ORDER BY chk_code`
     );
-    console.log(`Found ${result.rows.length} checklists of type '${chkType}'`);
     return result.rows;
   }
 
@@ -37,9 +35,9 @@ class Checklist {
    */
   static async getAll() {
     const result = await pool.query(
-      `SELECT chk_id, chk_code, chk_type, chk_place, chk_zone, chk_notes, chk_creationdate
+      `SELECT chk_id, chk_code, chk_place, chk_zone, chk_notes, chk_creationdate
        FROM checklist
-       ORDER BY chk_type, chk_code`
+       ORDER BY chk_code`
     );
     return result.rows;
   }
@@ -52,10 +50,10 @@ class Checklist {
   static async create(data) {
     const { code, type, place, zone, notes } = data;
     const result = await pool.query(
-      `INSERT INTO checklist (chk_code, chk_type, chk_place, chk_zone, chk_notes, chk_creationdate)
-       VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
+      `INSERT INTO checklist (chk_code, chk_place, chk_zone, chk_notes, chk_creationdate)
+       VALUES ($1, $2, $3, $4, CURRENT_DATE)
        RETURNING *`,
-      [code, type, place, zone, notes]
+      [code, place, zone, notes]
     );
     return result.rows[0];
   }
