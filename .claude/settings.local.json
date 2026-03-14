@@ -118,7 +118,8 @@
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel alias android-rfid-gq2ghivxw-guidoguidettis-projects.vercel.app android-rfid-murex.vercel.app 2>&1)",
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel alias ls 2>&1 | grep murex)",
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel alias ls 2>&1 | head -30)",
-      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel inspect android-rfid-murex.vercel.app 2>&1 | head -20)"
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel inspect android-rfid-murex.vercel.app 2>&1 | head -20)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" PATH=\"$JAVA_HOME/bin:$PATH\" java -version 2>&1 && cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1)"
     ]
   }
 }
