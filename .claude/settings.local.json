@@ -107,7 +107,18 @@
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1 | tail -20)",
       "Bash(cd \"C:/_RFID/Android_RFID/android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1 | tail -8)",
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID/backend\" && vercel logs --limit 20 2>&1 | tail -40)",
-      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1 | tail -10)"
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1 | tail -10)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel ls 2>&1 | head -20)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel project ls 2>&1 | head -20)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel project ls --scope guidoguidetti 2>&1 | head -20)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel whoami 2>&1 && vercel teams ls 2>&1)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel link --yes 2>&1)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel link --project android-rfid --yes 2>&1)",
+      "Bash(PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d rfid_db -c \"\\\\d checklist\" 2>&1)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel alias android-rfid-gq2ghivxw-guidoguidettis-projects.vercel.app android-rfid-murex.vercel.app 2>&1)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel alias ls 2>&1 | grep murex)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel alias ls 2>&1 | head -30)",
+      "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel inspect android-rfid-murex.vercel.app 2>&1 | head -20)"
     ]
   }
 }
