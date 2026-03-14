@@ -33,128 +33,227 @@
             android:textStyle="bold"
             android:gravity="center" />
 
-        <Button
-            android:id="@+id/btnClear"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="Clear"
-            android:textSize="12sp"
-            android:backgroundTint="#F44336"
-            android:textColor="#FFFFFF"
-            android:layout_marginEnd="4dp" />
+        <!-- Spacer to balance the back button -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
     </LinearLayout>
 
-    <!-- Scan Control -->
+    <!-- Contatore principale -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tags Counter"
+            android:textSize="18sp"
+            android:textColor="#666666" />
+
+        <TextView
+            android:id="@+id/tvFoundCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="280dp"
+            android:text="0"
+            android:textSize="100sp"
+            android:textStyle="bold"
+            android:textColor="#4CAF50"
+            android:gravity="center"
+            android:paddingHorizontal="16dp" />
+
+        <!-- Validated Counter -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                android:id="@+id/tvValidatedCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="40sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Validated"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+        </LinearLayout>
+
+        <!-- Pending + Ignored annotations -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvPendingAnnotation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 pending • "
+                android:textSize="12sp"
+                android:textColor="#FF9800" />
+
+            <TextView
+                android:id="@+id/tvIgnoredAnnotation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Ignored"
+                android:textSize="12sp"
+                android:textColor="#9E9E9E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Buttons Row (Details, Settings, Clear) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
-        android:background="#F5F5F5"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Premi Start per iniziare"
-            android:textSize="16sp"
-            android:textColor="#666666" />
-
-        <Button
-            android:id="@+id/btnPlayPause"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:text="▶"
-            android:textSize="24sp"
-            android:backgroundTint="#CCFF00"
-            android:textColor="#000000" />
-    </LinearLayout>
-
-    <!-- Status/Count -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Tags rilevati:"
-                android:textSize="16sp"
-                android:textColor="#666666" />
-
-            <TextView
-                android:id="@+id/tvFoundCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="#4CAF50" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvIgnoredAnnotation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="0 Ignored"
-            android:textSize="12sp"
-            android:textColor="#9E9E9E"
-            android:gravity="end"
-            android:layout_marginTop="2dp" />
-    </LinearLayout>
-
-    <!-- RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvTags"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:padding="8dp"
-        android:clipToPadding="false" />
-
-    <!-- Reader Status & Connection Progress -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="8dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         android:gravity="center">
 
-        <ProgressBar
-            android:id="@+id/progressConnection"
-            style="?android:attr/progressBarStyleSmall"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btnDetails"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:layout_marginBottom="4dp"/>
+            android:minHeight="56dp"
+            android:text="Details"
+            android:textSize="10sp"
+            android:background="@drawable/button_border"
+            app:backgroundTint="@null"
+            android:textColor="#2196F3"
+            android:drawableTop="@drawable/ic_info"
+            android:drawablePadding="2dp"
+            android:padding="4dp"
+            android:layout_marginEnd="4dp" />
 
-        <TextView
-            android:id="@+id/tvConnectionStatus"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btnSettings"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Connecting Reader..."
-            android:textSize="12sp"
+            android:minHeight="56dp"
+            android:text="Settings"
+            android:textSize="10sp"
+            android:background="@drawable/button_border"
+            app:backgroundTint="@null"
             android:textColor="#FF9800"
-            android:visibility="gone"
-            android:layout_marginBottom="4dp"/>
+            android:drawableTop="@drawable/ic_settings"
+            android:drawablePadding="2dp"
+            android:padding="4dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp" />
 
-        <TextView
-            android:id="@+id/tvReaderStatus"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Reader Disconnected"
-            android:textSize="14sp"
-            android:textColor="#F44336" />
+            android:minHeight="56dp"
+            android:text="CLEAR"
+            android:textSize="10sp"
+            android:background="@drawable/button_border"
+            app:backgroundTint="@null"
+            android:textColor="#F44336"
+            android:drawableTop="@drawable/ic_clear"
+            android:drawablePadding="2dp"
+            android:padding="4dp"
+            android:layout_marginStart="4dp" />
     </LinearLayout>
 
+    <!-- Buttons Row (Operations) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnOperations"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="Operations"
+            android:textSize="12sp"
+            android:background="@drawable/button_border"
+            app:backgroundTint="@null"
+            android:textColor="#9C27B0"
+            android:padding="4dp" />
+    </LinearLayout>
+
+    <!-- Footer con connessione e play/pause -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#000000"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+
+        <!-- Status connessione -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvReaderStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Disconnected"
+                android:textColor="#F44336"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:id="@+id/progressConnection"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvConnectionStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connecting..."
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Pulsante Play/Pause -->
+        <Button
+            android:id="@+id/btnPlayPause"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="▶"
+            android:textSize="32sp"
+            android:textColor="#000000"
+            android:backgroundTint="#CCFF00"
+            android:enabled="false" />
+    </LinearLayout>
 </LinearLayout>

@@ -1,5 +1,6 @@
 const Item = require('../models/Item');
 const Movement = require('../models/Movement');
+const pool = require('../db/config');
 
 // Registra una scansione RFID
 exports.recordScan = async (req, res) => {
@@ -151,6 +152,39 @@ exports.getUnexpectedMovements = async (req, res) => {
   } catch (error) {
     console.error('Error fetching unexpected movements:', error);
     res.status(500).json({ error: 'Failed to fetch unexpected movements' });
+  }
+};
+
+// Trasferisci tag: aggiorna Items + crea Movements per ogni EPC
+exports.transfer = async (req, res) => {
+  const { place_id, zone_id, epcs } = req.body;
+
+  if (!place_id || !zone_id || !Array.isArray(epcs) || epcs.length === 0) {
+    return res.status(400).json({ error: 'place_id, zone_id and epcs are required' });
+  }
+
+  try {
+    for (const epc of epcs) {
+      await pool.query(
+        `INSERT INTO "Items" (item_id, place_last, zone_last, date_lastseen, date_creation)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         ON CONFLICT (item_id) DO UPDATE SET
+           place_last = $2,
+           zone_last = $3,
+           date_lastseen = NOW()`,
+        [epc, place_id, zone_id]
+      );
+      await pool.query(
+        `INSERT INTO "Movements" (mov_epc, mov_dest_place, mov_dest_zone, mov_timestamp, mov_reader)
+         VALUES ($1, $2, $3, NOW(), 'TagInfo-Transfer')`,
+        [epc, place_id, zone_id]
+      );
+    }
+
+    res.json({ success: true, transferred_count: epcs.length });
+  } catch (error) {
+    console.error('Error transferring tags:', error);
+    res.status(500).json({ error: 'Failed to transfer tags', details: error.message });
   }
 };
 

@@ -39,7 +39,7 @@ class SettingsManager(context: Context) {
         const val DEFAULT_BEEP_VOLUME = "medium" // low, medium, high
         const val DEFAULT_BACKEND_URL = "http://192.168.0.55:3000/"
         const val DEFAULT_BATCH_DELAY_MS = 300L
-        const val DEFAULT_TAG_INFO_DELAY_MS = 300L
+        const val DEFAULT_TAG_INFO_DELAY_MS = 100L
     }
 
     // Tag Reading Mode

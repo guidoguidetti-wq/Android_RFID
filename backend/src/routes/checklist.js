@@ -8,6 +8,9 @@ router.get('/', checklistController.getAll);
 // GET /api/checklist/:id - Ottieni una checklist specifica
 router.get('/:id', checklistController.getById);
 
+// POST /api/checklist/create-from-scan - Crea checklist da tag scansionati
+router.post('/create-from-scan', checklistController.createFromScan);
+
 // POST /api/checklist - Crea una nuova checklist
 router.post('/', checklistController.create);
 

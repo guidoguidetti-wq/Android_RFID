@@ -224,7 +224,9 @@ data class InventoryItemDetail(
     val fldd01: String?,
     val inv_expected: Boolean? = null,
     val inv_unexpected: Boolean? = null,
-    val inv_lost: Boolean? = null
+    val inv_lost: Boolean? = null,
+    val place_last: String? = null,
+    val zone_last: String? = null
 )
 
 data class InventoryCountersResponse(
@@ -267,6 +269,15 @@ data class CreateInventoryRequest(
     val invLastPlace: String? = null, // Place per inventario da giacenza
     val invLastZones: String? = null  // Zone per inventario da giacenza (separate da virgola)
 )
+
+// Checklist from Scan Models
+data class ChecklistScanItem(val epc: String, val product_id: String?)
+data class CreateChecklistFromScanRequest(val chk_code: String, val chk_notes: String?, val items: List<ChecklistScanItem>)
+data class CreateChecklistFromScanResponse(val success: Boolean, val chk_id: Int?, val items_count: Int?, val products_count: Int?)
+
+// Transfer Models
+data class TransferRequest(val place_id: String, val zone_id: String, val epcs: List<String>)
+data class TransferResponse(val success: Boolean, val transferred_count: Int?)
 
 // Checklist Models
 data class ChecklistResponse(
@@ -375,6 +386,13 @@ interface ApiService {
 
     @GET("api/checklist/{id}")
     suspend fun getChecklistById(@Path("id") id: Int): Response<ChecklistResponse>
+
+    @POST("api/checklist/create-from-scan")
+    suspend fun createChecklistFromScan(@Body body: CreateChecklistFromScanRequest): Response<CreateChecklistFromScanResponse>
+
+    // Transfer Endpoint
+    @POST("api/rfid/transfer")
+    suspend fun transferTags(@Body body: TransferRequest): Response<TransferResponse>
 
     // RFID Endpoints
     @POST("api/rfid/scan")

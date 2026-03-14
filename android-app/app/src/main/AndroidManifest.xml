@@ -134,6 +134,18 @@
             android:label="Tag Info" />
 
         <activity
+            android:name=".TagInfoDetailsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="Tag Details" />
+
+        <activity
+            android:name=".TagInfoOperationsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="Operations" />
+
+        <activity
             android:name=".TagDetailActivity"
             android:exported="false"
             android:screenOrientation="portrait"

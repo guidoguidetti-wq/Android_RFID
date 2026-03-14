@@ -35,6 +35,10 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     private val _ignoredCount = MutableLiveData<Int>(0)
     val ignoredCount: LiveData<Int> = _ignoredCount
 
+    // Tags queued for backend confirmation (in debounce window)
+    private val _pendingCount = MutableLiveData<Int>(0)
+    val pendingCount: LiveData<Int> = _pendingCount
+
     private val _isScanning = MutableLiveData<Boolean>(false)
     val isScanning: LiveData<Boolean> = _isScanning
 
@@ -129,6 +133,7 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
             applyModeAndShow(epc, checkedTagsCache[epc])
         } else {
             pendingBatch.add(epc)
+            _pendingCount.postValue(pendingBatch.size)
             scheduleDebounce()
         }
     }
@@ -164,6 +169,7 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun flushPendingBatch() {
         val toFetch = pendingBatch.filter { !checkedTagsCache.containsKey(it) }
         pendingBatch.clear()
+        _pendingCount.postValue(0)  // immediate UI feedback: pending → 0 before network calls
         if (toFetch.isEmpty()) return
 
         // Step 1: fetch all items in parallel
@@ -214,7 +220,9 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                     fld01 = product?.fld01,
                     fld02 = product?.fld02,
                     fld03 = product?.fld03,
-                    fldd01 = product?.fldd01
+                    fldd01 = product?.fldd01,
+                    place_last = itemBody.place_last,
+                    zone_last = itemBody.zone_last
                 )
             } else {
                 checkedTagsCache[epc] = null
@@ -233,6 +241,8 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         _foundTags.postValue(currentList)
+        sharedTagList = currentList.toList()
+        _pendingCount.postValue(pendingBatch.size)
 
         // Update ignored count: EPCs confirmed as NOT in Items
         _ignoredCount.postValue(checkedTagsCache.values.count { it == null })
@@ -308,9 +318,11 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         _foundTags.value = emptyList()
         _rawTagCount.value = 0
         _ignoredCount.value = 0
+        _pendingCount.value = 0
         checkedTagsCache.clear()
         seenEpcs.clear()
         pendingBatch.clear()
+        sharedTagList = emptyList()
     }
 
     override fun onCleared() {
@@ -320,5 +332,8 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
 
     companion object {
         private const val TAG = "TagInfoViewModel"
+
+        @Volatile
+        var sharedTagList: List<InventoryItemDetail> = emptyList()
     }
 }

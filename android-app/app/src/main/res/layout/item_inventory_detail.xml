@@ -93,5 +93,30 @@
             android:textColor="#999999"
             android:layout_marginTop="4dp"
             android:fontFamily="monospace" />
+
+        <!-- Place / Zone last seen (small, hidden when null) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:id="@+id/tvPlaceLast"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="#AAAAAA"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvZoneLast"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="#AAAAAA"
+                android:layout_marginStart="4dp"
+                android:visibility="gone" />
+        </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

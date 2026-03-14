@@ -8,6 +8,9 @@ router.post('/scan', rfidController.recordScan);
 // POST /api/rfid/batch-scan - Registra batch di scansioni
 router.post('/batch-scan', rfidController.recordBatchScan);
 
+// POST /api/rfid/transfer - Trasferisci tag (aggiorna Items + crea Movements)
+router.post('/transfer', rfidController.transfer);
+
 // GET /api/rfid/movements - Ottieni movimenti recenti
 router.get('/movements', rfidController.getRecentMovements);
 
