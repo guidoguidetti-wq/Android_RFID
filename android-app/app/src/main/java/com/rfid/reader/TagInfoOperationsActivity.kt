@@ -18,6 +18,7 @@ import com.rfid.reader.network.PlaceResponse
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.network.TransferRequest
 import com.rfid.reader.network.ZoneResponse
+import com.rfid.reader.utils.SessionManager
 import com.rfid.reader.viewmodel.TagInfoViewModel
 import kotlinx.coroutines.launch
 
@@ -34,7 +35,6 @@ class TagInfoOperationsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_tag_info_operations)
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
-
         findViewById<TextView>(R.id.tvTagsInfo).text = "${tags.size} tag validati"
 
         loadPlacesAndZones()
@@ -124,6 +124,7 @@ class TagInfoOperationsActivity : AppCompatActivity() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_transfer, null)
         val spinnerPlace = dialogView.findViewById<Spinner>(R.id.spinnerPlace)
         val spinnerZone = dialogView.findViewById<Spinner>(R.id.spinnerZone)
+        val etRef = dialogView.findViewById<EditText>(R.id.etTransferRef)
 
         val placeAdapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_item,
@@ -146,18 +147,26 @@ class TagInfoOperationsActivity : AppCompatActivity() {
             .setPositiveButton("Trasferisci") { _, _ ->
                 val selectedPlace = places[spinnerPlace.selectedItemPosition]
                 val selectedZone = zones[spinnerZone.selectedItemPosition]
-                transferTags(selectedPlace.place_id, selectedZone.zone_id)
+                val ref = etRef.text.toString().trim().takeIf { it.isNotEmpty() }
+                transferTags(selectedPlace.place_id, selectedZone.zone_id, ref)
             }
             .show()
     }
 
-    private fun transferTags(placeId: String, zoneId: String) {
+    private fun transferTags(placeId: String, zoneId: String, ref: String?) {
         val epcs = tags.map { it.epc }
+        val userName = SessionManager(this).getUserName()
 
         lifecycleScope.launch {
             try {
                 val response = apiService.transferTags(
-                    TransferRequest(place_id = placeId, zone_id = zoneId, epcs = epcs)
+                    TransferRequest(
+                        place_id = placeId,
+                        zone_id = zoneId,
+                        epcs = epcs,
+                        mov_ref = ref,
+                        mov_user = userName
+                    )
                 )
                 if (response.isSuccessful) {
                     val body = response.body()

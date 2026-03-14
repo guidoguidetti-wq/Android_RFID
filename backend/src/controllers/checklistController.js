@@ -64,16 +64,13 @@ exports.createFromScan = async (req, res) => {
     return res.status(400).json({ error: 'chk_code and items array are required' });
   }
 
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-
     // Recupera place di default dal primo utente
-    const userResult = await client.query('SELECT usr_def_place FROM users LIMIT 1');
+    const userResult = await pool.query('SELECT usr_def_place FROM users LIMIT 1');
     const chk_place = userResult.rows[0]?.usr_def_place || null;
 
     // Inserisce la checklist
-    const chkResult = await client.query(
+    const chkResult = await pool.query(
       `INSERT INTO checklist (chk_code, chk_type, chk_place, chk_notes, chk_creationdate)
        VALUES ($1, 'EPC', $2, $3, CURRENT_DATE) RETURNING chk_id`,
       [chk_code, chk_place, chk_notes || null]
@@ -82,7 +79,7 @@ exports.createFromScan = async (req, res) => {
 
     // Inserisce un record per ogni EPC in checklist_products_items
     for (const item of items) {
-      await client.query(
+      await pool.query(
         `INSERT INTO checklist_products_items (cki_chk_id, cki_product_id, cki_epc)
          VALUES ($1, $2, $3)`,
         [chk_id, item.product_id || null, item.epc]
@@ -98,14 +95,12 @@ exports.createFromScan = async (req, res) => {
     }
 
     for (const { pid, count } of Object.values(productGroups)) {
-      await client.query(
+      await pool.query(
         `INSERT INTO checklist_products (ckp_chk_id, ckp_product_id, ckp_qta)
          VALUES ($1, $2, $3)`,
         [chk_id, pid, count]
       );
     }
-
-    await client.query('COMMIT');
 
     res.json({
       success: true,
@@ -114,11 +109,8 @@ exports.createFromScan = async (req, res) => {
       products_count: Object.keys(productGroups).length
     });
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Error creating checklist from scan:', error);
     res.status(500).json({ error: 'Failed to create checklist', details: error.message });
-  } finally {
-    client.release();
   }
 };
 

@@ -30,6 +30,23 @@
     <Spinner
         android:id="@+id/spinnerZone"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Riferimento (opzionale)"
+        android:textSize="14sp"
+        android:textColor="#333333"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/etTransferRef"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Es. OrdineN123"
+        android:inputType="text"
+        android:maxLines="1" />
 
 </LinearLayout>

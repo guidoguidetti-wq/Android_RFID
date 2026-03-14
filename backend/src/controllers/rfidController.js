@@ -157,7 +157,7 @@ exports.getUnexpectedMovements = async (req, res) => {
 
 // Trasferisci tag: aggiorna Items + crea Movements per ogni EPC
 exports.transfer = async (req, res) => {
-  const { place_id, zone_id, epcs } = req.body;
+  const { place_id, zone_id, epcs, mov_ref = null, mov_user = null } = req.body;
 
   if (!place_id || !zone_id || !Array.isArray(epcs) || epcs.length === 0) {
     return res.status(400).json({ error: 'place_id, zone_id and epcs are required' });
@@ -175,9 +175,9 @@ exports.transfer = async (req, res) => {
         [epc, place_id, zone_id]
       );
       await pool.query(
-        `INSERT INTO "Movements" (mov_epc, mov_dest_place, mov_dest_zone, mov_timestamp, mov_reader)
-         VALUES ($1, $2, $3, NOW(), 'TagInfo-Transfer')`,
-        [epc, place_id, zone_id]
+        `INSERT INTO "Movements" (mov_epc, mov_dest_place, mov_dest_zone, mov_timestamp, mov_reader, mov_ref, mov_user)
+         VALUES ($1, $2, $3, NOW(), 'TagInfo-Transfer', $4, $5)`,
+        [epc, place_id, zone_id, mov_ref, mov_user]
       );
     }
 

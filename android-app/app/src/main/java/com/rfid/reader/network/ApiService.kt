@@ -276,7 +276,7 @@ data class CreateChecklistFromScanRequest(val chk_code: String, val chk_notes: S
 data class CreateChecklistFromScanResponse(val success: Boolean, val chk_id: Int?, val items_count: Int?, val products_count: Int?)
 
 // Transfer Models
-data class TransferRequest(val place_id: String, val zone_id: String, val epcs: List<String>)
+data class TransferRequest(val place_id: String, val zone_id: String, val epcs: List<String>, val mov_ref: String? = null, val mov_user: String? = null)
 data class TransferResponse(val success: Boolean, val transferred_count: Int?)
 
 // Checklist Models
