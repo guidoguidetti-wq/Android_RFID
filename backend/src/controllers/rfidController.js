@@ -164,6 +164,15 @@ exports.transfer = async (req, res) => {
   }
 
   try {
+    const placeCheck = await pool.query('SELECT place_id FROM "Places" WHERE place_id = $1', [place_id]);
+    if (placeCheck.rowCount === 0) {
+      return res.status(400).json({ error: `Place "${place_id}" non trovato` });
+    }
+    const zoneCheck = await pool.query('SELECT zone_id FROM "Zones" WHERE zone_id = $1', [zone_id]);
+    if (zoneCheck.rowCount === 0) {
+      return res.status(400).json({ error: `Zone "${zone_id}" non trovata` });
+    }
+
     for (const epc of epcs) {
       await pool.query(
         `INSERT INTO "Items" (item_id, place_last, zone_last, date_lastseen, date_creation)

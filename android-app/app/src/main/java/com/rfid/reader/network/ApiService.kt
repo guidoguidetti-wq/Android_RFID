@@ -272,7 +272,7 @@ data class CreateInventoryRequest(
 
 // Checklist from Scan Models
 data class ChecklistScanItem(val epc: String, val product_id: String?)
-data class CreateChecklistFromScanRequest(val chk_code: String, val chk_notes: String?, val items: List<ChecklistScanItem>)
+data class CreateChecklistFromScanRequest(val chk_code: String, val chk_notes: String?, val chk_zone: String?, val items: List<ChecklistScanItem>)
 data class CreateChecklistFromScanResponse(val success: Boolean, val chk_id: Int?, val items_count: Int?, val products_count: Int?)
 
 // Transfer Models

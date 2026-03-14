@@ -58,7 +58,7 @@ exports.getById = async (req, res) => {
  * Crea una checklist a partire da tag RFID scansionati
  */
 exports.createFromScan = async (req, res) => {
-  const { chk_code, chk_notes, items } = req.body;
+  const { chk_code, chk_notes, chk_zone, items } = req.body;
 
   if (!chk_code || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'chk_code and items array are required' });
@@ -71,9 +71,9 @@ exports.createFromScan = async (req, res) => {
 
     // Inserisce la checklist
     const chkResult = await pool.query(
-      `INSERT INTO checklist (chk_code, chk_place, chk_notes, chk_creationdate)
-       VALUES ($1, $2, $3, CURRENT_DATE) RETURNING chk_id`,
-      [chk_code, chk_place, chk_notes || null]
+      `INSERT INTO checklist (chk_code, chk_place, chk_zone, chk_notes, chk_creationdate)
+       VALUES ($1, $2, $3, $4, CURRENT_DATE) RETURNING chk_id`,
+      [chk_code, chk_place, chk_zone || null, chk_notes || null]
     );
     const chk_id = chkResult.rows[0].chk_id;
 

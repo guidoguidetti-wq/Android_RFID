@@ -66,10 +66,22 @@ class TagInfoOperationsActivity : AppCompatActivity() {
             Toast.makeText(this, "Nessun tag validato da aggiungere", Toast.LENGTH_SHORT).show()
             return
         }
+        if (zones.isEmpty()) {
+            Toast.makeText(this, "Caricamento zone in corso, riprova tra un momento", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_create_checklist, null)
         val etCode = dialogView.findViewById<EditText>(R.id.etChecklistCode)
         val etNotes = dialogView.findViewById<EditText>(R.id.etChecklistNotes)
+        val spinnerZone = dialogView.findViewById<Spinner>(R.id.spinnerZone)
+
+        val zoneAdapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_item,
+            zones.map { "${it.zone_id} – ${it.zone_name ?: it.zone_id}" }
+        )
+        zoneAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerZone.adapter = zoneAdapter
 
         AlertDialog.Builder(this)
             .setTitle("Crea Checklist")
@@ -82,18 +94,19 @@ class TagInfoOperationsActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
                 val notes = etNotes.text.toString().trim().takeIf { it.isNotEmpty() }
-                createChecklist(code, notes)
+                val selectedZone = zones[spinnerZone.selectedItemPosition]
+                createChecklist(code, notes, selectedZone.zone_id)
             }
             .show()
     }
 
-    private fun createChecklist(code: String, notes: String?) {
+    private fun createChecklist(code: String, notes: String?, zoneId: String?) {
         val items = tags.map { ChecklistScanItem(epc = it.epc, product_id = it.product_id) }
 
         lifecycleScope.launch {
             try {
                 val response = apiService.createChecklistFromScan(
-                    CreateChecklistFromScanRequest(chk_code = code, chk_notes = notes, items = items)
+                    CreateChecklistFromScanRequest(chk_code = code, chk_notes = notes, chk_zone = zoneId, items = items)
                 )
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -176,7 +189,13 @@ class TagInfoOperationsActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
-                    Toast.makeText(this@TagInfoOperationsActivity, "Errore: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    val errMsg = try {
+                        val json = org.json.JSONObject(response.errorBody()?.string() ?: "{}")
+                        json.optString("error", "Errore ${response.code()}")
+                    } catch (e: Exception) {
+                        "Errore ${response.code()}"
+                    }
+                    Toast.makeText(this@TagInfoOperationsActivity, errMsg, Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@TagInfoOperationsActivity, "Errore di rete: ${e.message}", Toast.LENGTH_SHORT).show()
