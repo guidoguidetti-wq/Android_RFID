@@ -73,7 +73,7 @@ class InventoryItem {
        FROM "inventory_items" ii
        LEFT JOIN "Items" i ON ii.int_epc = i.item_id
        WHERE ii.int_inv_id = $1
-       ORDER BY ii.scan_timestamp DESC`,
+       ORDER BY ii.int_id DESC`,
       [inventoryId]
     );
     return result.rows;
@@ -137,8 +137,8 @@ class InventoryItem {
          COUNT(DISTINCT i.place_last) as unique_places,
          COUNT(DISTINCT i.zone_last) as unique_zones,
          COUNT(DISTINCT i.item_product_id) as unique_products,
-         MIN(ii.scan_timestamp) as first_scan,
-         MAX(ii.scan_timestamp) as last_scan
+         NULL as first_scan,
+         NULL as last_scan
        FROM "inventory_items" ii
        LEFT JOIN "Items" i ON ii.int_epc = i.item_id
        WHERE ii.int_inv_id = $1`,

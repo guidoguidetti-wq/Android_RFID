@@ -46,8 +46,11 @@ class LocateViewModel(application: Application) : AndroidViewModel(application) 
 
     private var targetProductId: String? = null
 
-    // Cache per evitare chiamate API ripetute per lo stesso EPC
-    // Map<EPC, IsMatch>
+    // Set di EPC pre-caricati per il prodotto selezionato (lookup locale, no API per tag)
+    private val productEpcSet = mutableSetOf<String>()
+    private var productEpcSetLoaded = false
+
+    // Cache per EPC già esclusi (non appartengono al prodotto)
     private val checkedTagsCache = mutableMapOf<String, Boolean>()
 
     init {
@@ -174,74 +177,29 @@ class LocateViewModel(application: Application) : AndroidViewModel(application) 
             currentList[existingIndex] = newTag
             _foundTags.value = currentList
 
-            // Se questo tag è selezionato, aggiorna anche selectedTag SUBITO per fluidità
             if (_selectedTag.value?.epc == epc) {
                 _selectedTag.value = newTag
             }
             return
         }
 
-        // Se abbiamo già verificato questo EPC e sappiamo che non è un match, ignora
-        if (checkedTagsCache.containsKey(epc) && checkedTagsCache[epc] == false) {
-            return
-        }
+        // EPC già escluso in precedenza
+        if (checkedTagsCache[epc] == false) return
 
-        // Nuovo tag: verifica con API
-        viewModelScope.launch {
-            try {
-                // Query backend per verificare product_id
-                val response = apiService.getItemByEpc(epc)
-                val mode = settingsManager.getTagReadingMode()
+        // Set non ancora caricato: skip (il tag verrà ripreso al prossimo ciclo di lettura)
+        if (!productEpcSetLoaded) return
 
-                if (response.isSuccessful) {
-                    val item = response.body()
+        // Lookup locale: nessuna chiamata API per tag
+        val isMatch = productEpcSet.contains(epc)
+        checkedTagsCache[epc] = isMatch
 
-                    // Applica filtro mode
-                    val shouldAdd = when (mode) {
-                        "mode_a" -> {
-                            // Solo censiti: deve esistere E matchare product_id
-                            item != null && item.item_product_id == targetProductId
-                        }
-                        "mode_b", "mode_c" -> {
-                            // Tutti: accetta tutti i tag che matchano product_id
-                            item?.item_product_id == targetProductId
-                        }
-                        else -> {
-                            // Default: tutti
-                            item?.item_product_id == targetProductId
-                        }
-                    }
-
-                    // Salva in cache
-                    checkedTagsCache[epc] = shouldAdd
-
-                    if (shouldAdd) {
-                        // EPC corrisponde! Aggiungi
-                        val updatedList = _foundTags.value?.toMutableList() ?: mutableListOf()
-
-                        if (updatedList.none { it.epc == epc }) {
-                            // ✅ Beep SOLO su nuovo EPC rilevato
-                            beepHelper.playBeep()
-
-                            updatedList.add(LocateTag(epc, rssi, false, System.currentTimeMillis()))
-                            _foundTags.value = updatedList
-                            android.util.Log.d(TAG, "New matching tag found: $epc (mode: $mode)")
-                        }
-                    }
-                } else if (response.code() == 404) {
-                    // Tag non censito
-                    val mode = settingsManager.getTagReadingMode()
-                    if (mode == "mode_c") {
-                        // In mode_c accetta anche non censiti se targetProduct è impostato
-                        // Ma per Locate ha senso solo cercare censiti, quindi ignoriamo
-                        android.util.Log.d(TAG, "EPC $epc not registered, skipping in Locate")
-                    }
-                    checkedTagsCache[epc] = false
-                } else {
-                    android.util.Log.w(TAG, "API check failed for $epc: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Error checking tag product: ${e.message}", e)
+        if (isMatch) {
+            val updatedList = _foundTags.value?.toMutableList() ?: mutableListOf()
+            if (updatedList.none { it.epc == epc }) {
+                beepHelper.playBeep()
+                updatedList.add(LocateTag(epc, rssi, false, System.currentTimeMillis()))
+                _foundTags.value = updatedList
+                android.util.Log.d(TAG, "New matching tag found: $epc")
             }
         }
     }
@@ -251,8 +209,32 @@ class LocateViewModel(application: Application) : AndroidViewModel(application) 
         _foundTags.value = emptyList()
         _selectedTag.value = null
         checkedTagsCache.clear()
+        productEpcSet.clear()
+        productEpcSetLoaded = false
         android.util.Log.d(TAG, "Target product set: $productId")
         loadProductDetails(productId)
+        loadProductEpcs(productId)
+    }
+
+    private fun loadProductEpcs(productId: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getItemsByProduct(productId)
+                if (response.isSuccessful) {
+                    val items = response.body() ?: emptyList()
+                    productEpcSet.clear()
+                    productEpcSet.addAll(items.map { it.item_id })
+                    productEpcSetLoaded = true
+                    android.util.Log.d(TAG, "Loaded ${productEpcSet.size} EPCs for product $productId")
+                } else {
+                    productEpcSetLoaded = true // caricamento fallito, set vuoto
+                    android.util.Log.w(TAG, "Failed to load EPCs for product $productId: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                productEpcSetLoaded = true
+                android.util.Log.e(TAG, "Error loading product EPCs", e)
+            }
+        }
     }
 
     private fun loadProductDetails(productId: String) {

@@ -76,7 +76,7 @@ class Inventory {
       name,
       note,
       placeId,
-      chkId = 0,
+      chkId = null,
       zones = null,
       detPlace = null,
       detZone = null,
@@ -90,11 +90,11 @@ class Inventory {
     const result = await pool.query(
       `INSERT INTO "inventories" (
         inv_name, inv_note, inv_place_id, inv_state, inv_start_date,
-        inv_chk_id, inv_zones, inv_det_place, inv_det_zone, inv_mis_place, inv_mis_zone,
+        inv_chk_id, inv_det_place, inv_det_zone, inv_mis_place, inv_mis_zone,
         inv_last, inv_last_place, inv_last_zones
       )
-       VALUES ($1, $2, $3, 'OPEN', CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [name, note, placeId, chkId, zones, detPlace, detZone, misPlace, misZone, invLast, invLastPlace, invLastZones]
+       VALUES ($1, $2, $3, 'OPEN', CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [name, note, placeId, chkId, detPlace, detZone, misPlace, misZone, invLast, invLastPlace, invLastZones]
     );
     console.log(`Inventory '${result.rows[0].inv_id}' created for place '${placeId}' (chkId: ${chkId}, invLast: ${invLast}, lastZones: ${invLastZones})`);
     return result.rows[0];

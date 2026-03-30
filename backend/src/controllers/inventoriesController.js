@@ -255,7 +255,7 @@ exports.create = async (req, res) => {
       name,
       note,
       placeId,
-      chkId: invChkId || 0,
+      chkId: invChkId || null,
       zones: invZones || null,
       detPlace: invDetPlace || null,
       detZone: invDetZone || null,

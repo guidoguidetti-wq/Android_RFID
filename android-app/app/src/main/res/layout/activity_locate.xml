@@ -69,6 +69,15 @@
                 android:inputType="text"
                 android:completionThreshold="1" />
 
+            <ImageButton
+                android:id="@+id/btnScanBarcode"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:src="@android:drawable/ic_menu_camera"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Scansiona barcode" />
+
             <Button
                 android:id="@+id/btnPlayPause"
                 android:layout_width="60dp"

@@ -14,6 +14,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.zxing.integration.android.IntentIntegrator
 import com.rfid.reader.adapters.LocateTag
 import com.rfid.reader.adapters.LocateTagsAdapter
 import com.rfid.reader.databinding.ActivityLocateBinding
@@ -227,6 +228,27 @@ class LocateActivity : AppCompatActivity() {
         
         binding.btnClear.setOnClickListener {
             viewModel.clearAllTags()
+        }
+
+        binding.btnScanBarcode.setOnClickListener {
+            val integrator = IntentIntegrator(this)
+            integrator.setCaptureActivity(PortraitCaptureActivity::class.java)
+            integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES)
+            integrator.setPrompt("Scansiona il barcode prodotto")
+            integrator.setBeepEnabled(true)
+            integrator.setBarcodeImageEnabled(false)
+            integrator.initiateScan()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
+        if (result != null) {
+            if (result.contents != null) {
+                binding.etProductId.setText(result.contents)
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data)
         }
     }
 

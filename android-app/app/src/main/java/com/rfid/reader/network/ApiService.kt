@@ -437,6 +437,9 @@ interface ApiService {
     @GET("api/items/zone/{zoneId}")
     suspend fun getItemsByZone(@Path("zoneId") zoneId: String): Response<List<ItemResponse>>
 
+    @GET("api/items/product/{productId}")
+    suspend fun getItemsByProduct(@Path("productId") productId: String): Response<List<ItemResponse>>
+
     // Places Endpoints
     @GET("api/places")
     suspend fun getAllPlaces(): Response<List<PlaceResponse>>
