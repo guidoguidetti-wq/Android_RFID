@@ -300,8 +300,8 @@ class InventoryScanActivity : AppCompatActivity() {
         }
 
         binding.btnDeleteInventory.setOnClickListener {
-            android.util.Log.d(TAG, "Delete inventory button pressed")
-            showDeleteConfirmationDialog()
+            android.util.Log.d(TAG, "Delete inventory button pressed - blocked on mobile")
+            showDeleteNotAllowedDialog()
         }
 
         binding.btnMenu.setOnClickListener {
@@ -343,15 +343,12 @@ class InventoryScanActivity : AppCompatActivity() {
     /**
      * Mostra dialog di conferma per eliminare l'inventario
      */
-    private fun showDeleteConfirmationDialog() {
+    private fun showDeleteNotAllowedDialog() {
         AlertDialog.Builder(this)
             .setTitle("Elimina Inventario")
-            .setMessage("ATTENZIONE: Sei sicuro di voler eliminare completamente questo inventario? Saranno eliminati l'inventario e tutti i suoi item. Questa azione non può essere annullata.")
-            .setPositiveButton("Sì, Elimina") { _, _ ->
-                deleteInventory()
-            }
-            .setNegativeButton("Annulla", null)
-            .setIcon(android.R.drawable.ic_delete)
+            .setMessage("Per eliminare un Inventario, utilizza l'applicazione Desktop")
+            .setPositiveButton("OK", null)
+            .setIcon(android.R.drawable.ic_dialog_info)
             .show()
     }
 
@@ -430,44 +427,6 @@ class InventoryScanActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Elimina l'inventario e tutti gli items associati
-     */
-    private fun deleteInventory() {
-        android.util.Log.d(TAG, "Deleting inventory $inventoryId")
-
-        // Disabilita pulsanti durante operazione
-        binding.btnDeleteInventory.isEnabled = false
-        binding.btnDeleteInventory.text = "Deleting..."
-
-        lifecycleScope.launch {
-            try {
-                viewModel.deleteInventory()
-
-                Toast.makeText(
-                    this@InventoryScanActivity,
-                    "Inventario eliminato con successo",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                android.util.Log.d(TAG, "Inventory deleted successfully")
-
-                // Torna alla lista inventari
-                finish()
-            } catch (e: Exception) {
-                Toast.makeText(
-                    this@InventoryScanActivity,
-                    "Errore: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-                android.util.Log.e(TAG, "Error deleting inventory", e)
-
-                // Riabilita pulsante
-                binding.btnDeleteInventory.isEnabled = true
-                binding.btnDeleteInventory.text = "DELETE\nInventory"
-            }
-        }
-    }
 
     override fun onPause() {
         super.onPause()

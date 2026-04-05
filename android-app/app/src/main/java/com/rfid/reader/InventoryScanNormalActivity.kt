@@ -270,17 +270,10 @@ class InventoryScanNormalActivity : AppCompatActivity() {
 
     private fun showDeleteConfirmDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Delete Inventory")
-            .setMessage("Eliminare l'inventario? Questa azione è irreversibile.")
-            .setPositiveButton("Conferma") { _, _ ->
-                android.util.Log.d(TAG, "Deleting inventory $inventoryId")
-                lifecycleScope.launch {
-                    viewModel.deleteInventory()
-                    Toast.makeText(this@InventoryScanNormalActivity, "Inventario eliminato", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
-            .setNegativeButton("Annulla", null)
+            .setTitle("Elimina Inventario")
+            .setMessage("Per eliminare un Inventario, utilizza l'applicazione Desktop")
+            .setPositiveButton("OK", null)
+            .setIcon(android.R.drawable.ic_dialog_info)
             .show()
     }
 

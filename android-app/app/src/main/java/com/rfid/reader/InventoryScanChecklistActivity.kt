@@ -182,6 +182,13 @@ class InventoryScanChecklistActivity : AppCompatActivity() {
             android.util.Log.d(TAG, "Total expected: $totalExp")
         }
 
+        // Modalità inventario: cambia colore badge per tipo 3 (checklist EPC = arancione)
+        viewModel.inventoryModeLive.observe(this) { mode ->
+            val badgeColor = if (mode == "checklist_epc") "#FF9800" else "#4CAF50"
+            binding.llInventoryBadge.background.setTint(android.graphics.Color.parseColor(badgeColor))
+            android.util.Log.d(TAG, "Badge color updated for mode: $mode")
+        }
+
         // Stato connessione reader
         viewModel.readerStatus.observe(this) { status ->
             binding.tvReaderStatus.text = status
@@ -289,17 +296,10 @@ class InventoryScanChecklistActivity : AppCompatActivity() {
 
     private fun showDeleteConfirmDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Delete Inventory")
-            .setMessage("Eliminare l'inventario checklist? Questa azione è irreversibile.")
-            .setPositiveButton("Conferma") { _, _ ->
-                android.util.Log.d(TAG, "Deleting checklist inventory $inventoryId")
-                lifecycleScope.launch {
-                    viewModel.deleteInventory()
-                    Toast.makeText(this@InventoryScanChecklistActivity, "Inventario eliminato", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
-            .setNegativeButton("Annulla", null)
+            .setTitle("Elimina Inventario")
+            .setMessage("Per eliminare un Inventario, utilizza l'applicazione Desktop")
+            .setPositiveButton("OK", null)
+            .setIcon(android.R.drawable.ic_dialog_info)
             .show()
     }
 

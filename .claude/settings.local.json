@@ -121,7 +121,8 @@
       "Bash(cd \"C:\\\\_RFID\\\\Android_RFID\\\\backend\" && vercel inspect android-rfid-murex.vercel.app 2>&1 | head -20)",
       "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" PATH=\"$JAVA_HOME/bin:$PATH\" java -version 2>&1 && cd \"C:\\\\_RFID\\\\Android_RFID\\\\android-app\" && JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" ./gradlew assembleDebug 2>&1)",
       "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" PATH=\"$JAVA_HOME/bin:$PATH\" ./gradlew assembleDebug)",
-      "Bash(PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d rfid_db -c \"\\\\d inventory_items\")"
+      "Bash(PGPASSWORD='npg_BCdrof7vEPy1' psql -h ep-plain-frog-agqkflif-pooler.c-2.eu-central-1.aws.neon.tech -p 5432 -U neondb_owner -d rfid_db -c \"\\\\d inventory_items\")",
+      "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\" \"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot/bin/java\" -version)"
     ]
   }
 }

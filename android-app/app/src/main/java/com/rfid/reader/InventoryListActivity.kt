@@ -42,10 +42,14 @@ class InventoryListActivity : AppCompatActivity() {
     private fun setupUI() {
         binding.btnBack.setOnClickListener { finish() }
 
-        // Pulsante Nuovo Inventario
+        // Pulsante Nuovo Inventario - creazione disabilitata su mobile
         binding.btnNewInventory.setOnClickListener {
-            val intent = Intent(this, NewInventoryActivity::class.java)
-            startActivityForResult(intent, REQUEST_NEW_INVENTORY)
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Nuovo Inventario")
+                .setMessage("Per creare un Nuovo Inventario, utilizza l'applicazione Desktop")
+                .setPositiveButton("OK", null)
+                .setIcon(android.R.drawable.ic_dialog_info)
+                .show()
         }
 
         // Search functionality
@@ -74,7 +78,11 @@ class InventoryListActivity : AppCompatActivity() {
                     InventoryScanStockActivity::class.java
                 }
                 2 -> {
-                    android.util.Log.d(TAG, "Opening CHECKLIST inventory: ${inventory.inv_id}")
+                    android.util.Log.d(TAG, "Opening CHECKLIST SKU inventory: ${inventory.inv_id}")
+                    InventoryScanChecklistActivity::class.java
+                }
+                3 -> {
+                    android.util.Log.d(TAG, "Opening CHECKLIST EPC inventory: ${inventory.inv_id}")
                     InventoryScanChecklistActivity::class.java
                 }
                 4 -> {

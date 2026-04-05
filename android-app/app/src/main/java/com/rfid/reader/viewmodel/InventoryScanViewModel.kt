@@ -123,7 +123,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
 
                     // ✅ Carica counters SINCRONO (nello stesso coroutine, no race condition)
                     when (data.mode) {
-                        "checklist", "last_place" -> {
+                        "checklist", "checklist_epc", "last_place" -> {
                             android.util.Log.d(TAG, "${data.mode} mode: totalExpected=${data.totalExpected}")
                             // Carica counters esistenti dal DB (senza azzerarli prima)
                             loadExistingStatusCountersSync(data.totalExpected)
@@ -190,18 +190,25 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                         android.util.Log.d(TAG, "Normal mode loaded - Total: ${counters.total_count}, Validated: ${counters.expected_count}, Ignored: $ignoredFromDb")
                     }
                     "checklist" -> {
-                        // CHECKLIST MODE: lost calcolato client-side = totalExpected - expected
-                        // ignoredFromDb usa lost_count dal DB (esclude record inv_lost=true da vecchi dati)
+                        // CHECKLIST SKU MODE (tipo 2): lost calcolato client-side = totalExpected - expected
                         val checklistLost = Math.max(0, totalExpected - counters.expected_count)
                         val checklistIgnored = Math.max(0, counters.total_count - counters.expected_count - counters.unexpected_count - counters.lost_count)
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = counters.unexpected_count
                         _lostCount.value = checklistLost
                         _ignoredCount.value = checklistIgnored
-                        android.util.Log.d(TAG, "Checklist mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: $checklistLost, Ignored: $checklistIgnored")
+                        android.util.Log.d(TAG, "Checklist SKU mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: $checklistLost, Ignored: $checklistIgnored")
+                    }
+                    "checklist_epc" -> {
+                        // CHECKLIST EPC MODE (tipo 3): lost letto dal DB (pre-popolato come inv_lost=true)
+                        _expectedCount.value = counters.expected_count
+                        _unexpectedCount.value = counters.unexpected_count
+                        _lostCount.value = counters.lost_count
+                        _ignoredCount.value = ignoredFromDb
+                        android.util.Log.d(TAG, "Checklist EPC mode loaded - Total: $totalScanned, Exp: ${counters.expected_count}, Unexp: ${counters.unexpected_count}, Lost: ${counters.lost_count}, Ignored: $ignoredFromDb")
                     }
                     "last_place" -> {
-                        // ✅ STOCK MODE: Logica esistente
+                        // STOCK MODE (tipo 1): lost letto dal DB
                         _expectedCount.value = counters.expected_count
                         _unexpectedCount.value = counters.unexpected_count
                         _lostCount.value = counters.lost_count
@@ -225,7 +232,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                 // Fallback: inizializza con valori default
                 _expectedCount.value = 0
                 _unexpectedCount.value = 0
-                _lostCount.value = if (inventoryMode == "checklist") totalExpected else 0
+                _lostCount.value = if (inventoryMode == "checklist" || inventoryMode == "checklist_epc") totalExpected else 0
                 _ignoredCount.value = 0
             }
         } catch (e: Exception) {
@@ -442,13 +449,21 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
                             android.util.Log.d(TAG, "Normal - Validated: ${counters.expectedCount}, Ignored: ${counters.ignoredCount}")
                         }
                         "checklist" -> {
-                            // lostCount calcolato client-side = totalExpected - expected
+                            // Checklist SKU (tipo 2): lostCount calcolato client-side = totalExpected - expected
                             val newLost = Math.max(0, (_totalExpectedLive.value ?: 0) - counters.expectedCount)
                             _expectedCount.value = counters.expectedCount
                             _unexpectedCount.value = counters.unexpectedCount
                             _lostCount.value = newLost
                             _ignoredCount.value = counters.ignoredCount
-                            android.util.Log.d(TAG, "Checklist - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: $newLost, Ignored: ${counters.ignoredCount}")
+                            android.util.Log.d(TAG, "Checklist SKU - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: $newLost, Ignored: ${counters.ignoredCount}")
+                        }
+                        "checklist_epc" -> {
+                            // Checklist EPC (tipo 3): lostCount letto dal DB
+                            _expectedCount.value = counters.expectedCount
+                            _unexpectedCount.value = counters.unexpectedCount
+                            _lostCount.value = counters.lostCount
+                            _ignoredCount.value = counters.ignoredCount
+                            android.util.Log.d(TAG, "Checklist EPC - Exp: ${counters.expectedCount}, Unexp: ${counters.unexpectedCount}, Lost: ${counters.lostCount}, Ignored: ${counters.ignoredCount}")
                         }
                         "last_place" -> {
                             _expectedCount.value = counters.expectedCount

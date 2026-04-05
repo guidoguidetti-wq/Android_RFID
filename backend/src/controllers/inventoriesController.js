@@ -2,6 +2,7 @@ const Inventory = require('../models/Inventory');
 const InventoryItem = require('../models/InventoryItem');
 const Item = require('../models/Item');
 const ChecklistProduct = require('../models/ChecklistProduct');
+const ChecklistItem = require('../models/ChecklistItem');
 const pool = require('../db/config');
 
 /**
@@ -415,13 +416,15 @@ exports.addScan = async (req, res) => {
     // ========== NUOVA LOGICA: Distingue le 3 modalità ==========
 
     // Determina modalità inventario da inv_type (fallback su vecchia logica se null)
-    // 1=Stock, 2=Checklist(SKU), 3=Checklist(EPC) [non gestito], 4=Normal
+    // 1=Stock, 2=Checklist(SKU), 3=Checklist(EPC), 4=Normal
     const invType = inventory.inv_type;
-    const isChecklistMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
-    const isStockMode    = invType ? invType === 1 : inventory.inv_last === true;
-    const isNormalMode   = !isChecklistMode && !isStockMode;
+    const isChecklistSKUMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const isChecklistEPCMode = invType === 3;
+    const isChecklistMode    = isChecklistSKUMode || isChecklistEPCMode;
+    const isStockMode        = invType ? invType === 1 : inventory.inv_last === true;
+    const isNormalMode       = !isChecklistMode && !isStockMode;
 
-    console.log(`Inventory mode: ${isChecklistMode ? 'CHECKLIST' : isStockMode ? 'STOCK' : 'NORMAL'}`);
+    console.log(`Inventory mode: ${isChecklistEPCMode ? 'CHECKLIST-EPC' : isChecklistSKUMode ? 'CHECKLIST-SKU' : isStockMode ? 'STOCK' : 'NORMAL'}`);
 
     // ========== MODALITÀ NORMAL ==========
     if (isNormalMode) {
@@ -490,14 +493,27 @@ exports.addScan = async (req, res) => {
         calculatedStatus = 'expected';
       }
     }
-    // ========== MODALITÀ CHECKLIST ==========
-    else if (isChecklistMode) {
-      console.log(`Checklist mode: Processing EPC ${epc}`);
+    // ========== MODALITÀ CHECKLIST EPC (tipo 3) ==========
+    else if (isChecklistEPCMode) {
+      console.log(`Checklist EPC mode: Processing EPC ${epc}`);
+      shouldAddToInventory = true;
+
+      // Expected se l'EPC è presente in checklist_items, unexpected altrimenti
+      const checklistItem = await ChecklistItem.findEpcInChecklist(inventory.inv_chk_id, epc);
+      calculatedStatus = checklistItem ? 'expected' : 'unexpected';
+      console.log(`Checklist EPC: ${epc} → ${calculatedStatus}`);
+
+      const itemData = await Item.findByEpc(epc);
+      if (itemData) productId = itemData.item_product_id || null;
+    }
+    // ========== MODALITÀ CHECKLIST SKU (tipo 2) ==========
+    else if (isChecklistSKUMode) {
+      console.log(`Checklist SKU mode: Processing EPC ${epc}`);
 
       // 1. Verifica se EPC è censito in Items - se non trovato, ignora
       const itemData = await Item.findByEpc(epc);
       if (!itemData) {
-        console.log(`Checklist: EPC ${epc} NOT in Items - IGNORED`);
+        console.log(`Checklist SKU: EPC ${epc} NOT in Items - IGNORED`);
         shouldAddToInventory = false;
       } else {
         productId = itemData.item_product_id || null;
@@ -512,21 +528,21 @@ exports.addScan = async (req, res) => {
             const expectedQta = parseInt(checklistProduct.ckp_qta) || 0;
 
             if (currentQtaExp + 1 <= expectedQta) {
-              console.log(`Checklist: Product ${productId} matched (${currentQtaExp + 1}/${expectedQta}) - EXPECTED`);
+              console.log(`Checklist SKU: Product ${productId} matched (${currentQtaExp + 1}/${expectedQta}) - EXPECTED`);
               await ChecklistProduct.incrementExpected(inventory.inv_chk_id, productId);
               calculatedStatus = 'expected';
             } else {
-              console.log(`Checklist: Product ${productId} exceeded (${currentQtaExp + 1}/${expectedQta}) - UNEXPECTED`);
+              console.log(`Checklist SKU: Product ${productId} exceeded (${currentQtaExp + 1}/${expectedQta}) - UNEXPECTED`);
               await ChecklistProduct.incrementUnexpected(inventory.inv_chk_id, productId);
               calculatedStatus = 'unexpected';
             }
           } else {
-            console.log(`Checklist: Product ${productId} NOT in checklist - UNEXPECTED`);
+            console.log(`Checklist SKU: Product ${productId} NOT in checklist - UNEXPECTED`);
             calculatedStatus = 'unexpected';
           }
         } else {
           // In Items ma senza productId associato
-          console.log(`Checklist: EPC ${epc} has no productId - UNEXPECTED`);
+          console.log(`Checklist SKU: EPC ${epc} has no productId - UNEXPECTED`);
           calculatedStatus = 'unexpected';
         }
       }
@@ -641,9 +657,11 @@ exports.addBatchScan = async (req, res) => {
 
     // Determina modalità inventario da inv_type (fallback su vecchia logica se null)
     const invType = inventory.inv_type;
-    const isChecklistMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
-    const isStockMode    = invType ? invType === 1 : inventory.inv_last === true;
-    const isNormalMode   = !isChecklistMode && !isStockMode;
+    const isChecklistSKUMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const isChecklistEPCMode = invType === 3;
+    const isChecklistMode    = isChecklistSKUMode || isChecklistEPCMode;
+    const isStockMode        = invType ? invType === 1 : inventory.inv_last === true;
+    const isNormalMode       = !isChecklistMode && !isStockMode;
 
     // ── 2. Carica items già presenti in inventory_items per questo batch (1 query) ──
     const existingResult = await pool.query(
@@ -689,16 +707,20 @@ exports.addBatchScan = async (req, res) => {
     itemsResult.rows.forEach(r => itemsMap.set(r.item_id, r));
 
     // ── 4. Setup per modalità specifiche (1 query ciascuna se necessario) ────
-    let checklistProductsMap = null; // Map: productId -> { ckp_qta, ckp_qta_exp }
-    let expectedEpcsSet = null;      // Per Stock mode
+    let checklistProductsMap = null; // Map: productId -> { ckp_qta, ckp_qta_exp } (tipo 2)
+    let expectedEpcsSet = null;      // Set di EPC attesi - Stock mode (tipo 1) e EPC checklist (tipo 3)
 
-    if (isChecklistMode) {
+    if (isChecklistSKUMode) {
       const products = await ChecklistProduct.getByChecklistId(inventory.inv_chk_id);
       checklistProductsMap = new Map();
       products.forEach(p => checklistProductsMap.set(String(p.ckp_product_id), {
         ckp_qta: parseInt(p.ckp_qta) || 0,
         ckp_qta_exp: parseInt(p.ckp_qta_exp) || 0
       }));
+    } else if (isChecklistEPCMode) {
+      // Tipo 3: set di EPC presenti in checklist_items
+      const chkItems = await ChecklistItem.getByChecklistId(inventory.inv_chk_id);
+      expectedEpcsSet = new Set(chkItems.map(i => String(i.ckp_epc_id)));
     } else if (isStockMode) {
       const lastPlace = inventory.inv_last_place;
       const lastZones = inventory.inv_last_zones
@@ -714,7 +736,7 @@ exports.addBatchScan = async (req, res) => {
     // ── 5. Classifica ogni EPC in memoria ────────────────────────────────────
     const toInsertNew  = []; // { epc, invExpected, invUnexpected }
     const toUpdateLost = []; // { epc, invExpected, invUnexpected }  (erano inv_lost=true)
-    const checklistIncrements = new Map(); // productId -> { expected, unexpected }
+    const checklistIncrements = new Map(); // productId -> { expected, unexpected } (tipo 2)
 
     for (const epc of epcsToProcess) {
       const itemData = itemsMap.get(epc);
@@ -745,7 +767,10 @@ exports.addBatchScan = async (req, res) => {
           // mode_c
           calculatedStatus = 'expected';
         }
-      } else if (isChecklistMode) {
+      } else if (isChecklistEPCMode) {
+        // Tipo 3: expected se EPC in checklist_items, unexpected altrimenti
+        calculatedStatus = (expectedEpcsSet && expectedEpcsSet.has(epc)) ? 'expected' : 'unexpected';
+      } else if (isChecklistSKUMode) {
         if (!itemData) {
           // EPC non censito in Items → ignora, non scrivere in inventory_items
           shouldAdd = false;
@@ -811,7 +836,8 @@ exports.addBatchScan = async (req, res) => {
       );
     }
 
-    // ── 8. Aggiorna counter checklist in batch (1 query per prodotto unico) ──
+    // ── 8. Aggiorna counter checklist in batch ──────────────────────────────
+    // Tipo 2 (SKU): counter per product_id
     for (const [productId, inc] of checklistIncrements) {
       if (inc.expected > 0) {
         await pool.query(
@@ -941,12 +967,14 @@ exports.clearItems = async (req, res) => {
     }
 
     const invType = inventory.inv_type;
-    const isChecklistMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
-    const isStockMode    = invType ? invType === 1 : inventory.inv_last === true;
+    const isChecklistSKUMode = invType ? invType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const isChecklistEPCMode = invType === 3;
+    const isChecklistMode    = isChecklistSKUMode || isChecklistEPCMode;
+    const isStockMode        = invType ? invType === 1 : inventory.inv_last === true;
 
-    // Resetta counter checklist prima di eliminare gli items
-    if (isChecklistMode) {
-      console.log(`Clearing checklist inventory ${invId} - resetting checklist counters`);
+    // Resetta counter checklist SKU prima di eliminare gli items
+    if (isChecklistSKUMode) {
+      console.log(`Clearing SKU checklist inventory ${invId} - resetting checklist_products counters`);
       await ChecklistProduct.resetCounters(inventory.inv_chk_id);
     }
 
@@ -980,9 +1008,21 @@ exports.clearItems = async (req, res) => {
       repopulated = insertResult.rowCount;
       console.log(`Stock mode: re-populated ${repopulated} lost items`);
 
-    } else if (isChecklistMode) {
-      // Checklist mode: niente pre-popolamento, Lost = totalExpected - expected (calcolato dinamicamente)
-      console.log(`Checklist mode: cleared, no pre-population needed`);
+    } else if (isChecklistEPCMode && inventory.inv_chk_id) {
+      // EPC checklist mode (tipo 3): ripopola da checklist_items come lost
+      const insertResult = await pool.query(
+        `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+         SELECT $1, ckp_epc_id, true, false, false
+         FROM checklist_items
+         WHERE ckp_chl_id = $2`,
+        [invId, inventory.inv_chk_id]
+      );
+      repopulated = insertResult.rowCount;
+      console.log(`EPC checklist mode: re-populated ${repopulated} lost items`);
+
+    } else if (isChecklistSKUMode) {
+      // SKU checklist mode (tipo 2): niente pre-popolamento, Lost calcolato dinamicamente
+      console.log(`Checklist SKU mode: cleared, no pre-population needed`);
     }
 
     res.json({
@@ -1053,12 +1093,15 @@ exports.getExpectations = async (req, res) => {
       checklistProducts: []     // Per checklist mode: product_id -> qty
     };
 
-    // Mode 1: Checklist-based (inv_chk_id != 0)
-    if (inventory.inv_chk_id && inventory.inv_chk_id !== 0) {
+    // Determina tipo inventario
+    const expInvType = inventory.inv_type;
+    const expIsChecklistSKU = expInvType ? expInvType === 2 : !!(inventory.inv_chk_id && inventory.inv_chk_id !== 0);
+    const expIsChecklistEPC = expInvType === 3;
+
+    // Mode: Checklist SKU (tipo 2) - usa checklist_products
+    if (expIsChecklistSKU && inventory.inv_chk_id) {
       result.mode = 'checklist';
 
-      // ✅ NUOVA LOGICA: Inizializza i counter della checklist all'apertura
-      // Solo se l'inventario è vuoto (prima apertura)
       const existingItemsCount = await pool.query(
         `SELECT COUNT(*) as cnt FROM "inventory_items" WHERE int_inv_id = $1`,
         [invId]
@@ -1066,10 +1109,10 @@ exports.getExpectations = async (req, res) => {
       const hasItems = parseInt(existingItemsCount.rows[0].cnt) > 0;
 
       if (!hasItems) {
-        console.log(`Checklist inventory ${invId} is empty - initializing checklist counters`);
+        console.log(`Checklist SKU inventory ${invId} is empty - initializing checklist_products counters`);
         await ChecklistProduct.resetCounters(inventory.inv_chk_id);
       } else {
-        console.log(`Checklist inventory ${invId} has ${existingItemsCount.rows[0].cnt} items - syncing checklist counters with real data`);
+        console.log(`Checklist SKU inventory ${invId} has ${existingItemsCount.rows[0].cnt} items - syncing`);
         await ChecklistProduct.syncCountersWithInventory(inventory.inv_chk_id, invId);
       }
 
@@ -1077,7 +1120,36 @@ exports.getExpectations = async (req, res) => {
       result.checklistProducts = products;
       result.totalExpected = products.reduce((sum, p) => sum + (parseInt(p.ckp_qta) || 0), 0);
 
-      console.log(`Checklist mode: ${products.length} products, total expected: ${result.totalExpected}`);
+      console.log(`Checklist SKU mode: ${products.length} products, total expected: ${result.totalExpected}`);
+    }
+    // Mode: Checklist EPC (tipo 3) - usa checklist_items come sorgente di EPC attesi
+    else if (expIsChecklistEPC && inventory.inv_chk_id) {
+      result.mode = 'checklist_epc';  // Modalità distinta da type 2: lost letto dal DB
+
+      // Numero di EPC attesi = righe in checklist_items per questa checklist
+      const countRes = await pool.query(
+        `SELECT COUNT(*) as cnt FROM checklist_items WHERE ckp_chl_id = $1`,
+        [inventory.inv_chk_id]
+      );
+      result.totalExpected = parseInt(countRes.rows[0].cnt) || 0;
+
+      console.log(`Checklist EPC mode: ${result.totalExpected} EPCs expected`);
+
+      // Pre-popola inventory_items con gli EPC della checklist come "lost"
+      // Solo quelli non ancora presenti (permette riapertura inventario senza doppioni)
+      if (result.totalExpected > 0) {
+        const insertResult = await pool.query(
+          `INSERT INTO "inventory_items" (int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+           SELECT $1, ckp_epc_id, true, false, false
+           FROM checklist_items
+           WHERE ckp_chl_id = $2
+             AND ckp_epc_id NOT IN (
+               SELECT int_epc FROM "inventory_items" WHERE int_inv_id = $1
+             )`,
+          [invId, inventory.inv_chk_id]
+        );
+        console.log(`Pre-populated ${insertResult.rowCount} new lost items for EPC checklist inventory ${invId}`);
+      }
     }
     // Mode 2: Last-place based (inv_last = true)
     else if (inventory.inv_last === true) {
