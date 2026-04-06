@@ -25,14 +25,14 @@ class Movement {
     const result = await pool.query(
       `INSERT INTO "Movements" (
         mov_epc, mov_dest_place, mov_dest_zone, mov_timestamp,
-        mov_unexpected, mov_readscount, mov_rssiavg, mov_user,
+        mov_readscount, mov_rssiavg, mov_user,
         mov_reader, mov_readerpw, mov_notes, mov_ref,
-        mov_antpw1, mov_antpw2, mov_antpw3, mov_antpw4, mov_antenna
+        mov_antp1, mov_antp2, mov_antp3, mov_antp4, mov_antenna
       )
-      VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
-        epc, placeId, zoneId, unexpected, readsCount, rssiAvg, user,
+        epc, placeId, zoneId, readsCount, rssiAvg, user,
         reader, readerPower, notes, reference,
         antennaPower1, antennaPower2, antennaPower3, antennaPower4, antenna
       ]
@@ -63,11 +63,10 @@ class Movement {
       `SELECT m.*,
         p.place_name,
         z.zone_name,
-        mr.mref_description as reference_desc
+        m.mov_ref as reference_desc
        FROM "Movements" m
        LEFT JOIN "Places" p ON m.mov_dest_place = p.place_id
        LEFT JOIN "Zones" z ON m.mov_dest_zone = z.zone_id
-       LEFT JOIN "movements_reference" mr ON m.mov_mref_id = mr.mref_id
        WHERE m.mov_epc = $1
        ORDER BY m.mov_timestamp DESC
        LIMIT $2`,
