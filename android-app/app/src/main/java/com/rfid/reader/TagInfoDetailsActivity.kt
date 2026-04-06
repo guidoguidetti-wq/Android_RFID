@@ -89,6 +89,8 @@ class TagInfoDetailsAdapter(private val onItemClick: (InventoryItemDetail) -> Un
             binding.tvZoneLast.text = item.zone_last ?: ""
             binding.tvZoneLast.visibility = if (item.zone_last.isNullOrBlank()) View.GONE else View.VISIBLE
 
+            binding.tvMovCount.text = "${item.movCount} mov"
+
             binding.tvProductId.setOnClickListener {
                 val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Product ID", item.product_id ?: "")

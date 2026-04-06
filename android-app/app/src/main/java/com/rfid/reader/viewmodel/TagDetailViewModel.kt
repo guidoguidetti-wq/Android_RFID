@@ -26,29 +26,38 @@ class TagDetailViewModel(application: Application) : AndroidViewModel(applicatio
     fun loadTagData(epc: String, productId: String?) {
         _isLoading.value = true
         viewModelScope.launch {
+            // Each step is independent: failures in labels/product don't block history
             try {
-                // 1. Load Labels
                 val labelsResp = apiService.getProductLabels()
                 if (labelsResp.isSuccessful) {
-                    val labelMap = labelsResp.body()?.associate { it.field_name to (it.label_text ?: it.field_name) } ?: emptyMap()
-                    _labels.value = labelMap
+                    _labels.value = labelsResp.body()
+                        ?.associate { it.field_name to (it.label_text ?: it.field_name) }
+                        ?: emptyMap()
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("TagDetailViewModel", "Error loading labels", e)
+            }
 
-                // 2. Load Product Details
+            try {
                 if (productId != null && productId != "NON CENSITO") {
                     val prodResp = apiService.getProductById(productId)
                     if (prodResp.isSuccessful) {
                         _product.value = prodResp.body()
                     }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("TagDetailViewModel", "Error loading product", e)
+            }
 
-                // 3. Load History
+            try {
                 val historyResp = apiService.getItemHistory(epc)
                 if (historyResp.isSuccessful) {
                     _history.value = historyResp.body() ?: emptyList()
+                } else {
+                    android.util.Log.e("TagDetailViewModel", "History fetch failed: ${historyResp.code()}")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("TagDetailViewModel", "Error loading tag data", e)
+                android.util.Log.e("TagDetailViewModel", "Error loading history", e)
             } finally {
                 _isLoading.value = false
             }

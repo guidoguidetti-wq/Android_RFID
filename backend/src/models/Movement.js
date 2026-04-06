@@ -118,6 +118,29 @@ class Movement {
     return result.rows;
   }
 
+  // Count movements by EPC
+  static async countByEpc(epc) {
+    const result = await pool.query(
+      'SELECT COUNT(*) as count FROM "Movements" WHERE mov_epc = $1',
+      [epc]
+    );
+    return parseInt(result.rows[0].count);
+  }
+
+  // Count movements by EPC (batch)
+  static async countByEpcBatch(epcs) {
+    if (!epcs || epcs.length === 0) return {};
+    const result = await pool.query(
+      `SELECT mov_epc, COUNT(*) as count FROM "Movements"
+       WHERE mov_epc = ANY($1::text[])
+       GROUP BY mov_epc`,
+      [epcs]
+    );
+    const map = {};
+    result.rows.forEach(row => { map[row.mov_epc] = parseInt(row.count); });
+    return map;
+  }
+
   // Get movements by time range
   static async findByDateRange(startDate, endDate) {
     const result = await pool.query(

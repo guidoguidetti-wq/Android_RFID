@@ -120,7 +120,7 @@ exports.getMovementsByEpc = async (req, res) => {
   const limit = parseInt(req.query.limit) || 100;
 
   try {
-    const movements = await Movement.findByEpc(epc, limit);
+    const movements = await Movement.findHistoryByEpc(epc, limit);
     res.json(movements);
   } catch (error) {
     console.error('Error fetching movements:', error);

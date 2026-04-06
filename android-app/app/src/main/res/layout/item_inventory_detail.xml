@@ -83,16 +83,33 @@
                 android:maxLines="1" />
         </LinearLayout>
 
-        <!-- EPC -->
-        <TextView
-            android:id="@+id/tvEpc"
-            android:layout_width="wrap_content"
+        <!-- EPC + Movement count row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="EPC: 3008..."
-            android:textSize="11sp"
-            android:textColor="#999999"
+            android:orientation="horizontal"
             android:layout_marginTop="4dp"
-            android:fontFamily="monospace" />
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvEpc"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="EPC: 3008..."
+                android:textSize="11sp"
+                android:textColor="#999999"
+                android:fontFamily="monospace" />
+
+            <TextView
+                android:id="@+id/tvMovCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 mov"
+                android:textSize="10sp"
+                android:textColor="#9E9E9E"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
 
         <!-- Place / Zone last seen (small, hidden when null) -->
         <LinearLayout

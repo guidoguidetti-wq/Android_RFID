@@ -209,7 +209,21 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
             }.awaitAll()
         }.toMap()
 
-        // Step 3: populate cache for all fetched EPCs
+        // Step 3: fetch movement counts in batch for registered items
+        val registeredEpcs = itemResults.filter { (_, item) -> item != null }.map { (epc, _) -> epc }
+        val movCountMap: Map<String, Int> = if (registeredEpcs.isNotEmpty()) {
+            try {
+                val resp = apiService.getMovementCountBatch(mapOf("epcs" to registeredEpcs))
+                if (resp.isSuccessful) resp.body() ?: emptyMap() else emptyMap()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error fetching movement counts", e)
+                emptyMap()
+            }
+        } else emptyMap()
+
+        // Step 4: populate cache for all fetched EPCs
         for ((epc, itemBody) in itemResults) {
             if (itemBody != null) {
                 val prodId = itemBody.item_product_id
@@ -222,14 +236,15 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
                     fld03 = product?.fld03,
                     fldd01 = product?.fldd01,
                     place_last = itemBody.place_last,
-                    zone_last = itemBody.zone_last
+                    zone_last = itemBody.zone_last,
+                    movCount = movCountMap[epc] ?: 0
                 )
             } else {
                 checkedTagsCache[epc] = null
             }
         }
 
-        // Step 4: single batch update of the list (avoids race condition from parallel postValue)
+        // Step 5: single batch update of the list (avoids race condition from parallel postValue)
         val currentList = _foundTags.value?.toMutableList() ?: mutableListOf()
         for ((epc, _) in itemResults) {
             val item = checkedTagsCache[epc]

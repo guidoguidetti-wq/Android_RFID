@@ -11,6 +11,12 @@ router.get('/:epc', itemsController.getItemByEpc);
 // GET /api/items/:epc/history - Ottieni storico movimenti per EPC
 router.get('/:epc/history', itemsController.getItemHistory);
 
+// GET /api/items/:epc/movements/count - Conta movimenti per EPC
+router.get('/:epc/movements/count', itemsController.getItemMovementCount);
+
+// POST /api/items/movements/count-batch - Conta movimenti per lista EPCs
+router.post('/movements/count-batch', itemsController.getItemsMovementCountBatch);
+
 // GET /api/items/place/:placeId - Ottieni items per place
 router.get('/place/:placeId', itemsController.getItemsByPlace);
 

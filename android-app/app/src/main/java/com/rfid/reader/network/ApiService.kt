@@ -226,7 +226,8 @@ data class InventoryItemDetail(
     val inv_unexpected: Boolean? = null,
     val inv_lost: Boolean? = null,
     val place_last: String? = null,
-    val zone_last: String? = null
+    val zone_last: String? = null,
+    val movCount: Int = 0
 )
 
 data class InventoryCountersResponse(
@@ -430,6 +431,9 @@ interface ApiService {
 
     @GET("api/items/{epc}/history")
     suspend fun getItemHistory(@Path("epc") epc: String): Response<List<ItemHistoryResponse>>
+
+    @POST("api/items/movements/count-batch")
+    suspend fun getMovementCountBatch(@Body body: Map<String, List<String>>): Response<Map<String, Int>>
 
     @GET("api/items/place/{placeId}")
     suspend fun getItemsByPlace(@Path("placeId") placeId: String): Response<List<ItemResponse>>

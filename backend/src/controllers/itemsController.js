@@ -86,6 +86,33 @@ exports.getItemsByProduct = async (req, res) => {
   }
 };
 
+// Conta movimenti per EPC (singolo)
+exports.getItemMovementCount = async (req, res) => {
+  const { epc } = req.params;
+  try {
+    const count = await Movement.countByEpc(epc);
+    res.json({ epc, count });
+  } catch (error) {
+    console.error('Error counting movements:', error);
+    res.status(500).json({ error: 'Failed to count movements' });
+  }
+};
+
+// Conta movimenti per lista EPCs (batch)
+exports.getItemsMovementCountBatch = async (req, res) => {
+  const { epcs } = req.body;
+  if (!Array.isArray(epcs) || epcs.length === 0) {
+    return res.status(400).json({ error: 'epcs array is required' });
+  }
+  try {
+    const counts = await Movement.countByEpcBatch(epcs);
+    res.json(counts);
+  } catch (error) {
+    console.error('Error batch counting movements:', error);
+    res.status(500).json({ error: 'Failed to batch count movements' });
+  }
+};
+
 // Crea o aggiorna item
 exports.upsertItem = async (req, res) => {
   const {

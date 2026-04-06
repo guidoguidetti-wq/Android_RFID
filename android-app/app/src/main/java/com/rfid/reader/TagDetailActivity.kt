@@ -117,15 +117,16 @@ class TagHistoryAdapter : RecyclerView.Adapter<TagHistoryAdapter.ViewHolder>() {
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: ItemHistoryResponse) {
-            // Format timestamp: yyyy-MM-dd'T'HH:mm:ss.SSSZ to dd.MM.yyyy HH:mm:ss
-            try {
-                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-                val outputFormat = SimpleDateFormat("dd.MM.yyyy - HH:mm:ss", Locale.getDefault())
-                val date = inputFormat.parse(item.mov_timestamp)
-                binding.tvTimestamp.text = date?.let { outputFormat.format(it) } ?: item.mov_timestamp
-            } catch (e: Exception) {
-                binding.tvTimestamp.text = item.mov_timestamp
+            val outputFormat = SimpleDateFormat("dd.MM.yyyy - HH:mm:ss", Locale.getDefault())
+            val parsed = listOf(
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss"
+            ).firstNotNullOfOrNull { fmt ->
+                try { SimpleDateFormat(fmt, Locale.getDefault()).also { it.isLenient = false }.parse(item.mov_timestamp ?: "") } catch (e: Exception) { null }
             }
+            binding.tvTimestamp.text = parsed?.let { outputFormat.format(it) } ?: item.mov_timestamp
 
             binding.tvPlace.text = "Place: ${item.place_name ?: item.mov_dest_place ?: "N/A"}"
             binding.tvZone.text = "Zone: ${item.zone_name ?: item.mov_dest_zone ?: "N/A"}"
