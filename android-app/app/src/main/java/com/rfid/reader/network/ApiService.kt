@@ -276,6 +276,8 @@ data class ChecklistScanItem(val epc: String, val product_id: String?)
 data class CreateChecklistFromScanRequest(val chk_code: String, val chk_notes: String?, val chk_zone: String?, val items: List<ChecklistScanItem>)
 data class CreateChecklistFromScanResponse(val success: Boolean, val chk_id: Int?, val items_count: Int?, val products_count: Int?)
 
+data class MovementCountItem(val epc: String, val count: Int)
+
 // Transfer Models
 data class TransferRequest(val place_id: String, val zone_id: String, val epcs: List<String>, val mov_ref: String? = null, val mov_user: String? = null)
 data class TransferResponse(val success: Boolean, val transferred_count: Int?)
@@ -433,7 +435,7 @@ interface ApiService {
     suspend fun getItemHistory(@Path("epc") epc: String): Response<List<ItemHistoryResponse>>
 
     @POST("api/items/movements/count-batch")
-    suspend fun getMovementCountBatch(@Body body: Map<String, List<String>>): Response<Map<String, Int>>
+    suspend fun getMovementCountBatch(@Body body: Map<String, List<String>>): Response<List<MovementCountItem>>
 
     @GET("api/items/place/{placeId}")
     suspend fun getItemsByPlace(@Path("placeId") placeId: String): Response<List<ItemResponse>>

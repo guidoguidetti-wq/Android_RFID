@@ -214,7 +214,9 @@ class TagInfoViewModel(application: Application) : AndroidViewModel(application)
         val movCountMap: Map<String, Int> = if (registeredEpcs.isNotEmpty()) {
             try {
                 val resp = apiService.getMovementCountBatch(mapOf("epcs" to registeredEpcs))
-                if (resp.isSuccessful) resp.body() ?: emptyMap() else emptyMap()
+                if (resp.isSuccessful) {
+                    resp.body()?.associate { it.epc to it.count } ?: emptyMap()
+                } else emptyMap()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
