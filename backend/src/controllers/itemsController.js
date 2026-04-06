@@ -98,7 +98,7 @@ exports.getItemMovementCount = async (req, res) => {
   }
 };
 
-// Conta movimenti per lista EPCs (batch)
+// Conta movimenti per lista EPCs (batch) - restituisce array [{epc, count}]
 exports.getItemsMovementCountBatch = async (req, res) => {
   const { epcs } = req.body;
   if (!Array.isArray(epcs) || epcs.length === 0) {
@@ -106,7 +106,9 @@ exports.getItemsMovementCountBatch = async (req, res) => {
   }
   try {
     const counts = await Movement.countByEpcBatch(epcs);
-    res.json(counts);
+    // Return as array of {epc, count} to avoid Gson Map<String,Int> deserialization issues
+    const result = epcs.map(epc => ({ epc, count: counts[epc] || 0 }));
+    res.json(result);
   } catch (error) {
     console.error('Error batch counting movements:', error);
     res.status(500).json({ error: 'Failed to batch count movements' });
