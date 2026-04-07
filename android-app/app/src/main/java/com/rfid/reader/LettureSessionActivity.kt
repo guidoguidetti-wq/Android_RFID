@@ -41,6 +41,7 @@ class LettureSessionActivity : AppCompatActivity() {
     private var destZoneId:            String? = null
     private var riferimento:           String? = null
     private var note:                  String? = null
+    private var registraSoloExpected:  Boolean = true
 
     // ── Views ───────────────────────────────────────────────────────────────
     private lateinit var tvTitle:           TextView
@@ -81,10 +82,11 @@ class LettureSessionActivity : AppCompatActivity() {
         readingMode   = intent.getStringExtra("READING_MODE") ?: "readonly"
         checklistMode = intent.getStringExtra("CHECKLIST_MODE") ?: "none"
         checklistCode = intent.getStringExtra("CHECKLIST_CODE")
-        destPlaceId   = intent.getStringExtra("DEST_PLACE_ID")
-        destZoneId    = intent.getStringExtra("DEST_ZONE_ID")
-        riferimento   = intent.getStringExtra("RIFERIMENTO")
-        note          = intent.getStringExtra("NOTE")
+        destPlaceId          = intent.getStringExtra("DEST_PLACE_ID")
+        destZoneId           = intent.getStringExtra("DEST_ZONE_ID")
+        riferimento          = intent.getStringExtra("RIFERIMENTO")
+        note                 = intent.getStringExtra("NOTE")
+        registraSoloExpected = intent.getBooleanExtra("REGISTRA_SOLO_EXPECTED", true)
 
         if (userId.isEmpty()) {
             Toast.makeText(this, "Errore: utente non identificato", Toast.LENGTH_SHORT).show()
@@ -294,7 +296,8 @@ class LettureSessionActivity : AppCompatActivity() {
                     destPlaceId            = destPlaceId,
                     destZoneId             = destZoneId,
                     riferimento            = riferimento,
-                    note                   = note
+                    note                   = note,
+                    registraSoloExpected   = registraSoloExpected
                 )
             }
             .setNegativeButton("Annulla", null)

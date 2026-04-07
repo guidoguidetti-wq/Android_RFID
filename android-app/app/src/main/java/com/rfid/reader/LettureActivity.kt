@@ -42,6 +42,10 @@ class LettureActivity : AppCompatActivity() {
     private lateinit var etChecklistCode: EditText
     private lateinit var btnScanBarcode: ImageButton
 
+    // ---- scope registrazione (transfer + checklist) ----
+    private lateinit var layoutRegistrazioneScope: LinearLayout
+    private lateinit var rgRegistrazioneScope: RadioGroup
+
     // ---- pulsanti ----
     private lateinit var btnStart: Button
     private lateinit var btnCancel: Button
@@ -71,21 +75,33 @@ class LettureActivity : AppCompatActivity() {
         etChecklistCode = findViewById(R.id.etChecklistCode)
         btnScanBarcode = findViewById(R.id.btnScanChecklistBarcode)
 
+        layoutRegistrazioneScope = findViewById(R.id.layoutRegistrazioneScope)
+        rgRegistrazioneScope     = findViewById(R.id.rgRegistrazioneScope)
+
         btnStart = findViewById(R.id.btnStart)
         btnCancel = findViewById(R.id.btnCancel)
     }
 
+    private fun updateRegistrazioneScopeVisibility() {
+        val isTransfer  = rgModalitaLettura.checkedRadioButtonId == R.id.rbRegistraTrasferimento
+        val isChecklist = rgChecklist.checkedRadioButtonId == R.id.rbChecklistSku ||
+                          rgChecklist.checkedRadioButtonId == R.id.rbChecklistEpc
+        layoutRegistrazioneScope.visibility = if (isTransfer && isChecklist) View.VISIBLE else View.GONE
+    }
+
     private fun setupListeners() {
-        // Modalità lettura: mostra/nascondi campi trasferimento
+        // Modalità lettura: mostra/nascondi campi trasferimento + scope
         rgModalitaLettura.setOnCheckedChangeListener { _, checkedId ->
             val isTransfer = checkedId == R.id.rbRegistraTrasferimento
             layoutTrasferimento.visibility = if (isTransfer) View.VISIBLE else View.GONE
+            updateRegistrazioneScopeVisibility()
         }
 
-        // Checklist: mostra/nascondi campo codice
+        // Checklist: mostra/nascondi campo codice + scope
         rgChecklist.setOnCheckedChangeListener { _, checkedId ->
             val needsCode = checkedId == R.id.rbChecklistSku || checkedId == R.id.rbChecklistEpc
             layoutChecklistCode.visibility = if (needsCode) View.VISIBLE else View.GONE
+            updateRegistrazioneScopeVisibility()
         }
 
         // Scan barcode per codice checklist
@@ -146,18 +162,19 @@ class LettureActivity : AppCompatActivity() {
         val userId = sessionManager.getUserName() ?: "user"
 
         val intent = Intent(this, LettureSessionActivity::class.java).apply {
-            putExtra("USER_ID",        userId)
-            putExtra("READING_MODE",   if (params.registraTransferimento) "transfer" else "readonly")
-            putExtra("CHECKLIST_MODE", when (params.checklistMode) {
+            putExtra("USER_ID",                 userId)
+            putExtra("READING_MODE",            if (params.registraTransferimento) "transfer" else "readonly")
+            putExtra("CHECKLIST_MODE",          when (params.checklistMode) {
                 ChecklistMode.SKU -> "sku"
                 ChecklistMode.EPC -> "epc"
                 else              -> "none"
             })
-            putExtra("CHECKLIST_CODE", params.checklistCode)
-            putExtra("DEST_PLACE_ID",  params.destPlaceId)
-            putExtra("DEST_ZONE_ID",   params.destZoneId)
-            putExtra("RIFERIMENTO",    params.riferimento)
-            putExtra("NOTE",           params.note)
+            putExtra("CHECKLIST_CODE",          params.checklistCode)
+            putExtra("DEST_PLACE_ID",           params.destPlaceId)
+            putExtra("DEST_ZONE_ID",            params.destZoneId)
+            putExtra("RIFERIMENTO",             params.riferimento)
+            putExtra("NOTE",                    params.note)
+            putExtra("REGISTRA_SOLO_EXPECTED",  params.registraSoloExpected)
         }
         startActivity(intent)
     }
@@ -199,6 +216,8 @@ class LettureActivity : AppCompatActivity() {
             else -> ChecklistMode.NONE
         }
 
+        val registraSoloExpected = rgRegistrazioneScope.checkedRadioButtonId == R.id.rbSoloExpected
+
         return SessionParams(
             registraTransferimento = isTransfer,
             destPlaceId = selectedPlace?.place_id,
@@ -208,7 +227,8 @@ class LettureActivity : AppCompatActivity() {
             checklistMode = checklistMode,
             checklistCode = if (checklistMode != ChecklistMode.NONE)
                 etChecklistCode.text.toString().trim().takeIf { it.isNotEmpty() }
-            else null
+            else null,
+            registraSoloExpected = registraSoloExpected
         )
     }
 
@@ -238,7 +258,8 @@ class LettureActivity : AppCompatActivity() {
         val riferimento: String?,
         val note: String?,
         val checklistMode: ChecklistMode,
-        val checklistCode: String?
+        val checklistCode: String?,
+        val registraSoloExpected: Boolean = true
     )
 
     companion object {

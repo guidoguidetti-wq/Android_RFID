@@ -303,7 +303,8 @@ data class LettureCommitRequest(
     val destZoneId: String? = null,
     val riferimento: String? = null,
     val note: String? = null,
-    val readerName: String? = null
+    val readerName: String? = null,
+    val registraSoloExpected: Boolean = true
 )
 data class LettureCommitResponse(val success: Boolean, val processedCount: Int, val message: String? = null)
 

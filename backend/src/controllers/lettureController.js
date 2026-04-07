@@ -388,16 +388,32 @@ exports.commitSession = async (req, res) => {
       destZoneId,
       riferimento,
       note,
-      readerName
+      readerName,
+      registraSoloExpected = true
     } = req.body;
 
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
-    // Recupera EPCs scansionati (escluso inv_lost=true = non trovati)
-    const epcsRes = await pool.query(
-      `SELECT int_epc FROM "inventory_items_temp" WHERE int_id = $1 AND inv_lost = false`,
-      [userId]
-    );
+    // Recupera EPCs scansionati in base al filtro richiesto:
+    // - registraSoloExpected=true  → solo inv_expected=true
+    // - registraSoloExpected=false → inv_expected=true OR inv_unexpected=true
+    // Se non è un trasferimento da checklist, si prendono tutti quelli non lost.
+    let epcsQuery;
+    let epcsParams;
+    if (registraTransferimento && !registraSoloExpected) {
+      // Trasferimento: Expected + Unexpected
+      epcsQuery  = `SELECT int_epc FROM "inventory_items_temp" WHERE int_id = $1 AND (inv_expected = true OR inv_unexpected = true)`;
+      epcsParams = [userId];
+    } else if (registraTransferimento) {
+      // Trasferimento: solo Expected (default)
+      epcsQuery  = `SELECT int_epc FROM "inventory_items_temp" WHERE int_id = $1 AND inv_expected = true`;
+      epcsParams = [userId];
+    } else {
+      // Sola lettura: tutti i tag letti (non lost)
+      epcsQuery  = `SELECT int_epc FROM "inventory_items_temp" WHERE int_id = $1 AND inv_lost = false`;
+      epcsParams = [userId];
+    }
+    const epcsRes = await pool.query(epcsQuery, epcsParams);
     const epcs = epcsRes.rows.map(r => r.int_epc);
 
     if (epcs.length === 0) {
@@ -449,7 +465,7 @@ exports.commitSession = async (req, res) => {
     // Pulisce sessione temp
     await pool.query('DELETE FROM "inventory_items_temp" WHERE int_id = $1', [userId]);
 
-    console.log(`Letture commit: userId=${userId}, ${epcs.length} EPCs, transfer=${registraTransferimento}`);
+    console.log(`Letture commit: userId=${userId}, ${epcs.length} EPCs, transfer=${registraTransferimento}, soloExpected=${registraSoloExpected}`);
     res.json({ success: true, processedCount: epcs.length });
   } catch (error) {
     console.error('Error in letture commit:', error);

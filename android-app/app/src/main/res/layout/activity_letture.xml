@@ -305,6 +305,65 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- ===== SEZIONE: COSA REGISTRARE (visibile solo transfer + checklist) ===== -->
+            <LinearLayout
+                android:id="@+id/layoutRegistrazioneScope"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cosa Registrare"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#666666"
+                    android:textAllCaps="true"
+                    android:layout_marginBottom="8dp" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <RadioGroup
+                            android:id="@+id/rgRegistrazioneScope"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <RadioButton
+                                android:id="@+id/rbSoloExpected"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Registra solo Expected"
+                                android:textSize="16sp"
+                                android:checked="true"
+                                android:paddingStart="8dp"
+                                android:layout_marginBottom="4dp" />
+
+                            <RadioButton
+                                android:id="@+id/rbExpectedEUnexpected"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Registra Expected ed Unexpected"
+                                android:textSize="16sp"
+                                android:paddingStart="8dp" />
+                        </RadioGroup>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 

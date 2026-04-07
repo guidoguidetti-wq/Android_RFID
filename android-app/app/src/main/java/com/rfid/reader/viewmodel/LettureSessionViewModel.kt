@@ -352,7 +352,8 @@ class LettureSessionViewModel(application: Application) : AndroidViewModel(appli
         destPlaceId: String?,
         destZoneId: String?,
         riferimento: String?,
-        note: String?
+        note: String?,
+        registraSoloExpected: Boolean = true
     ) {
         viewModelScope.launch {
             try {
@@ -364,7 +365,8 @@ class LettureSessionViewModel(application: Application) : AndroidViewModel(appli
                         destZoneId             = destZoneId,
                         riferimento            = riferimento,
                         note                   = note,
-                        readerName             = sessionManager.getUserName()
+                        readerName             = sessionManager.getUserName(),
+                        registraSoloExpected   = registraSoloExpected
                     )
                 )
                 if (response.isSuccessful) {
