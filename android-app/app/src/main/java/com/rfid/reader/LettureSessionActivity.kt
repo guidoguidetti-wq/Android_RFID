@@ -64,6 +64,7 @@ class LettureSessionActivity : AppCompatActivity() {
     private lateinit var btnPlayPause:      Button
     private lateinit var btnClear:          Button
     private lateinit var btnConfirm:        Button
+    private lateinit var btnDetails:        Button
     private lateinit var btnSettings:       Button
 
     companion object {
@@ -129,10 +130,14 @@ class LettureSessionActivity : AppCompatActivity() {
         btnPlayPause         = findViewById(R.id.btnPlayPause)
         btnClear             = findViewById(R.id.btnClear)
         btnConfirm           = findViewById(R.id.btnConfirm)
+        btnDetails           = findViewById(R.id.btnDetails)
         btnSettings          = findViewById(R.id.btnSettings)
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { onBackPressed() }
-        findViewById<ImageButton>(R.id.btnDetails).setOnClickListener { openDetails() }
+
+        // Confirm visibile solo in modalità Trasferimento
+        btnConfirm.visibility = if (readingMode == "transfer") View.VISIBLE else View.GONE
+        // Adjust weights: quando confirm è hidden, details prende più spazio visivamente
     }
 
     private fun setupUI() {
@@ -237,6 +242,7 @@ class LettureSessionActivity : AppCompatActivity() {
             startActivity(android.content.Intent(this, InventorySettingsActivity::class.java))
         }
 
+        btnDetails.setOnClickListener { openDetails() }
         btnClear.setOnClickListener { showClearDialog() }
         btnConfirm.setOnClickListener { showConfirmDialog() }
     }

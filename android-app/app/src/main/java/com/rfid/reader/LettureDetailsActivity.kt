@@ -1,11 +1,14 @@
 package com.rfid.reader
 
+import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -17,17 +20,20 @@ import com.rfid.reader.network.RetrofitClient
 import kotlinx.coroutines.launch
 
 /**
- * Mostra i dettagli degli items nella sessione Letture corrente.
+ * Dettagli items della sessione Letture corrente.
+ * Identica a InventoryDetailsActivity: filtri All/Expected/Unexpected/Lost,
+ * tap su item → Locate (RssiMonitorActivity).
  * Riceve userId via Intent extra "USER_ID".
- * Supporta filtri: Tutti / Expected / Unexpected / Lost.
  */
 class LettureDetailsActivity : AppCompatActivity() {
 
     private val apiService = RetrofitClient.apiService
 
-    private lateinit var rvItems:   RecyclerView
-    private lateinit var tvEmpty:   TextView
-    private lateinit var tvItemCount: TextView
+    private lateinit var rvItems:             RecyclerView
+    private lateinit var tvEmpty:             TextView
+    private lateinit var tvItemCount:         TextView
+    private lateinit var tvSessionLabel:      TextView
+    private lateinit var progressBar:         ProgressBar
     private lateinit var btnFilterAll:        Button
     private lateinit var btnFilterExpected:   Button
     private lateinit var btnFilterUnexpected: Button
@@ -35,11 +41,18 @@ class LettureDetailsActivity : AppCompatActivity() {
 
     private var userId = ""
     private var allItems: List<LettureItemResponse> = emptyList()
-    private var currentFilter = Filter.ALL
+    private var currentFilter = FilterType.ALL
 
-    private val adapter = LettureItemAdapter()
+    private val adapter = LettureItemAdapter { item ->
+        // Tap → Locate con RssiMonitor
+        val intent = Intent(this, RssiMonitorActivity::class.java).apply {
+            putExtra("TARGET_EPC", item.epc)
+            putExtra("AUTO_START", true)
+        }
+        startActivity(intent)
+    }
 
-    enum class Filter { ALL, EXPECTED, UNEXPECTED, LOST }
+    enum class FilterType { ALL, EXPECTED, UNEXPECTED, LOST }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,12 +75,16 @@ class LettureDetailsActivity : AppCompatActivity() {
         rvItems             = findViewById(R.id.rvItems)
         tvEmpty             = findViewById(R.id.tvEmpty)
         tvItemCount         = findViewById(R.id.tvItemCount)
+        tvSessionLabel      = findViewById(R.id.tvSessionLabel)
+        progressBar         = findViewById(R.id.progressBar)
         btnFilterAll        = findViewById(R.id.btnFilterAll)
         btnFilterExpected   = findViewById(R.id.btnFilterExpected)
         btnFilterUnexpected = findViewById(R.id.btnFilterUnexpected)
         btnFilterLost       = findViewById(R.id.btnFilterLost)
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
+
+        tvSessionLabel.text = "Utente: $userId"
     }
 
     private fun setupRecyclerView() {
@@ -76,13 +93,17 @@ class LettureDetailsActivity : AppCompatActivity() {
     }
 
     private fun setupFilterButtons() {
-        btnFilterAll.setOnClickListener        { applyFilter(Filter.ALL) }
-        btnFilterExpected.setOnClickListener   { applyFilter(Filter.EXPECTED) }
-        btnFilterUnexpected.setOnClickListener { applyFilter(Filter.UNEXPECTED) }
-        btnFilterLost.setOnClickListener       { applyFilter(Filter.LOST) }
+        btnFilterAll.setOnClickListener        { applyFilter(FilterType.ALL) }
+        btnFilterExpected.setOnClickListener   { applyFilter(FilterType.EXPECTED) }
+        btnFilterUnexpected.setOnClickListener { applyFilter(FilterType.UNEXPECTED) }
+        btnFilterLost.setOnClickListener       { applyFilter(FilterType.LOST) }
+
+        updateFilterButtonsUI(FilterType.ALL)
     }
 
     private fun loadItems() {
+        progressBar.visibility = View.VISIBLE
+
         lifecycleScope.launch {
             try {
                 val response = apiService.getLettureItems(userId)
@@ -90,91 +111,158 @@ class LettureDetailsActivity : AppCompatActivity() {
                     allItems = response.body() ?: emptyList()
                     applyFilter(currentFilter)
                 } else {
-                    Toast.makeText(this@LettureDetailsActivity,
-                        "Errore caricamento items: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    tvEmpty.text = "Errore caricamento dati"
+                    tvEmpty.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@LettureDetailsActivity,
-                    "Errore di rete: ${e.message}", Toast.LENGTH_SHORT).show()
+                tvEmpty.text = "Errore: ${e.message}"
+                tvEmpty.visibility = View.VISIBLE
+            } finally {
+                progressBar.visibility = View.GONE
             }
         }
     }
 
-    private fun applyFilter(filter: Filter) {
+    private fun applyFilter(filter: FilterType) {
         currentFilter = filter
-
-        // Update button alpha to show active
-        btnFilterAll.alpha        = if (filter == Filter.ALL)        1f else 0.5f
-        btnFilterExpected.alpha   = if (filter == Filter.EXPECTED)   1f else 0.5f
-        btnFilterUnexpected.alpha = if (filter == Filter.UNEXPECTED) 1f else 0.5f
-        btnFilterLost.alpha       = if (filter == Filter.LOST)       1f else 0.5f
+        updateFilterButtonsUI(filter)
 
         val filtered = when (filter) {
-            Filter.ALL        -> allItems
-            Filter.EXPECTED   -> allItems.filter { it.inv_expected == true }
-            Filter.UNEXPECTED -> allItems.filter { it.inv_unexpected == true }
-            Filter.LOST       -> allItems.filter { it.inv_lost == true }
+            FilterType.ALL        -> allItems
+            FilterType.EXPECTED   -> allItems.filter { it.inv_expected == true }
+            FilterType.UNEXPECTED -> allItems.filter { it.inv_unexpected == true }
+            FilterType.LOST       -> allItems.filter { it.inv_lost == true }
         }
 
-        tvItemCount.text = filtered.size.toString()
-        adapter.setItems(filtered)
+        adapter.submitList(filtered)
 
-        tvEmpty.visibility  = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        rvItems.visibility  = if (filtered.isEmpty()) View.GONE    else View.VISIBLE
+        val label = when (filter) {
+            FilterType.ALL        -> "Totale"
+            FilterType.EXPECTED   -> "Expected"
+            FilterType.UNEXPECTED -> "Unexpected"
+            FilterType.LOST       -> "Lost"
+        }
+        tvItemCount.text = "$label: ${filtered.size} items"
+
+        if (filtered.isEmpty()) {
+            tvEmpty.text = when (filter) {
+                FilterType.ALL        -> "Nessun tag nella sessione"
+                FilterType.EXPECTED   -> "Nessun tag expected"
+                FilterType.UNEXPECTED -> "Nessun tag unexpected"
+                FilterType.LOST       -> "Nessun tag lost"
+            }
+            tvEmpty.visibility = View.VISIBLE
+            rvItems.visibility = View.GONE
+        } else {
+            tvEmpty.visibility = View.GONE
+            rvItems.visibility = View.VISIBLE
+        }
     }
 
-    // ── Adapter ─────────────────────────────────────────────────────────────
+    private fun updateFilterButtonsUI(selected: FilterType) {
+        val buttons = listOf(
+            btnFilterAll        to FilterType.ALL,
+            btnFilterExpected   to FilterType.EXPECTED,
+            btnFilterUnexpected to FilterType.UNEXPECTED,
+            btnFilterLost       to FilterType.LOST
+        )
 
-    inner class LettureItemAdapter : RecyclerView.Adapter<LettureItemAdapter.VH>() {
-
-        private var items: List<LettureItemResponse> = emptyList()
-
-        fun setItems(list: List<LettureItemResponse>) {
-            items = list
-            notifyDataSetChanged()
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_letture_detail, parent, false)
-            return VH(view)
-        }
-
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            holder.bind(items[position])
-        }
-
-        override fun getItemCount() = items.size
-
-        inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-            private val viewStatus:  View     = view.findViewById(R.id.viewStatus)
-            private val tvProductId: TextView = view.findViewById(R.id.tvProductId)
-            private val tvStatus:    TextView = view.findViewById(R.id.tvStatus)
-            private val tvFldd01:    TextView = view.findViewById(R.id.tvFldd01)
-            private val tvFld01:     TextView = view.findViewById(R.id.tvFld01)
-            private val tvFld02:     TextView = view.findViewById(R.id.tvFld02)
-            private val tvFld03:     TextView = view.findViewById(R.id.tvFld03)
-            private val tvEpc:       TextView = view.findViewById(R.id.tvEpc)
-
-            fun bind(item: LettureItemResponse) {
-                tvProductId.text = item.product_id ?: "—"
-                tvFldd01.text    = item.fldd01 ?: ""
-                tvFld01.text     = item.fld01 ?: ""
-                tvFld02.text     = item.fld02 ?: ""
-                tvFld03.text     = item.fld03 ?: ""
-                tvEpc.text       = item.epc
-
-                val (label, color) = when {
-                    item.inv_lost == true       -> Pair("Lost",       0xFFF44336.toInt())
-                    item.inv_unexpected == true -> Pair("Unexpected", 0xFFFF9800.toInt())
-                    item.inv_expected == true   -> Pair("Expected",   0xFF4CAF50.toInt())
-                    else                         -> Pair("Normal",    0xFF9E9E9E.toInt())
+        for ((button, filterType) in buttons) {
+            if (filterType == selected) {
+                when (filterType) {
+                    FilterType.ALL        -> { button.setBackgroundColor(Color.parseColor("#2196F3")); button.setTextColor(Color.WHITE) }
+                    FilterType.EXPECTED   -> { button.setBackgroundColor(Color.parseColor("#4CAF50")); button.setTextColor(Color.WHITE) }
+                    FilterType.UNEXPECTED -> { button.setBackgroundColor(Color.parseColor("#FF9800")); button.setTextColor(Color.WHITE) }
+                    FilterType.LOST       -> { button.setBackgroundColor(Color.parseColor("#F44336")); button.setTextColor(Color.WHITE) }
                 }
-                tvStatus.text = label
-                tvStatus.setBackgroundColor(color)
-                viewStatus.setBackgroundColor(color)
+            } else {
+                button.setBackgroundColor(Color.WHITE)
+                when (filterType) {
+                    FilterType.ALL        -> button.setTextColor(Color.parseColor("#2196F3"))
+                    FilterType.EXPECTED   -> button.setTextColor(Color.parseColor("#4CAF50"))
+                    FilterType.UNEXPECTED -> button.setTextColor(Color.parseColor("#FF9800"))
+                    FilterType.LOST       -> button.setTextColor(Color.parseColor("#F44336"))
+                }
+            }
+        }
+    }
+}
 
-                tvFldd01.visibility = if (item.fldd01.isNullOrEmpty()) View.GONE else View.VISIBLE
+// ── Adapter ─────────────────────────────────────────────────────────────────
+
+class LettureItemAdapter(
+    private val onItemClick: (LettureItemResponse) -> Unit = {}
+) : RecyclerView.Adapter<LettureItemAdapter.ViewHolder>() {
+
+    private var items: List<LettureItemResponse> = emptyList()
+
+    companion object {
+        private val COLOR_EXPECTED   = Color.parseColor("#E8F5E9")
+        private val COLOR_UNEXPECTED = Color.parseColor("#FFF3E0")
+        private val COLOR_LOST       = Color.parseColor("#FFEBEE")
+        private val COLOR_NORMAL     = Color.WHITE
+    }
+
+    fun submitList(list: List<LettureItemResponse>) {
+        items = list
+        notifyDataSetChanged()
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_inventory_detail, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(items[position])
+    }
+
+    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val cardView:    androidx.cardview.widget.CardView = view.findViewById(R.id.cardView)
+        private val tvProductId: android.widget.TextView = view.findViewById(R.id.tvProductId)
+        private val tvFldd01:    android.widget.TextView = view.findViewById(R.id.tvFldd01)
+        private val tvFld01:     android.widget.TextView = view.findViewById(R.id.tvFld01)
+        private val tvFld02:     android.widget.TextView = view.findViewById(R.id.tvFld02)
+        private val tvFld03:     android.widget.TextView = view.findViewById(R.id.tvFld03)
+        private val tvEpc:       android.widget.TextView = view.findViewById(R.id.tvEpc)
+        private val tvMovCount:  android.widget.TextView = view.findViewById(R.id.tvMovCount)
+
+        fun bind(item: LettureItemResponse) {
+            tvProductId.text = item.product_id ?: "N/A"
+            tvEpc.text = "EPC: ${item.epc}"
+            tvMovCount.visibility = View.GONE
+
+            tvFldd01.text = item.fldd01 ?: ""
+            tvFldd01.visibility = if (item.fldd01.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            tvFld01.text = item.fld01 ?: ""
+            tvFld01.visibility = if (item.fld01.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            tvFld02.text = item.fld02 ?: ""
+            tvFld02.visibility = if (item.fld02.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            tvFld03.text = item.fld03 ?: ""
+            tvFld03.visibility = if (item.fld03.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            val bgColor = when {
+                item.inv_lost == true       -> COLOR_LOST
+                item.inv_expected == true   -> COLOR_EXPECTED
+                item.inv_unexpected == true -> COLOR_UNEXPECTED
+                else                        -> COLOR_NORMAL
+            }
+            cardView.setCardBackgroundColor(bgColor)
+
+            itemView.setOnClickListener { onItemClick(item) }
+
+            tvProductId.setOnLongClickListener {
+                val cb = it.context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                        as android.content.ClipboardManager
+                cb.setPrimaryClip(android.content.ClipData.newPlainText("Product ID", item.product_id))
+                android.widget.Toast.makeText(it.context, "Product ID copiato", android.widget.Toast.LENGTH_SHORT).show()
+                true
             }
         }
     }

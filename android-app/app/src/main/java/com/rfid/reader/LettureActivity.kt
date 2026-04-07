@@ -11,7 +11,6 @@ import android.widget.LinearLayout
 import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.zxing.integration.android.IntentIntegrator
@@ -45,10 +44,7 @@ class LettureActivity : AppCompatActivity() {
 
     // ---- pulsanti ----
     private lateinit var btnStart: Button
-    private lateinit var btnConfirm: Button
     private lateinit var btnCancel: Button
-
-    private var scanStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,7 +57,7 @@ class LettureActivity : AppCompatActivity() {
     }
 
     private fun bindViews() {
-        findViewById<ImageButton>(R.id.btnBack).setOnClickListener { confirmExit() }
+        findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
 
         rgModalitaLettura = findViewById(R.id.rgModalitaLettura)
         layoutTrasferimento = findViewById(R.id.layoutTrasferimento)
@@ -76,7 +72,6 @@ class LettureActivity : AppCompatActivity() {
         btnScanBarcode = findViewById(R.id.btnScanChecklistBarcode)
 
         btnStart = findViewById(R.id.btnStart)
-        btnConfirm = findViewById(R.id.btnConfirm)
         btnCancel = findViewById(R.id.btnCancel)
     }
 
@@ -105,8 +100,7 @@ class LettureActivity : AppCompatActivity() {
         }
 
         btnStart.setOnClickListener { handleStart() }
-        btnConfirm.setOnClickListener { handleConfirm() }
-        btnCancel.setOnClickListener { confirmExit() }
+        btnCancel.setOnClickListener { finish() }
     }
 
     private fun loadPlacesAndZones() {
@@ -168,10 +162,6 @@ class LettureActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun handleConfirm() {
-        Toast.makeText(this, "Usa il pulsante START per avviare la sessione", Toast.LENGTH_SHORT).show()
-    }
-
     private fun validateForm(): Boolean {
         val isTransfer = rgModalitaLettura.checkedRadioButtonId == R.id.rbRegistraTrasferimento
 
@@ -222,19 +212,6 @@ class LettureActivity : AppCompatActivity() {
         )
     }
 
-    private fun confirmExit() {
-        if (scanStarted) {
-            AlertDialog.Builder(this)
-                .setTitle("Uscire?")
-                .setMessage("La sessione di lettura è in corso. Vuoi uscire senza confermare?")
-                .setPositiveButton("Esci") { _, _ -> finish() }
-                .setNegativeButton("Annulla", null)
-                .show()
-        } else {
-            finish()
-        }
-    }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (result != null) {
@@ -247,7 +224,7 @@ class LettureActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        confirmExit()
+        finish()
     }
 
     // ---- Data classes ----

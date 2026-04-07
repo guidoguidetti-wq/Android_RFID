@@ -32,87 +32,117 @@
             android:textStyle="bold"
             android:gravity="center" />
 
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+    </LinearLayout>
+
+    <!-- Info Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#F5F5F5">
+
+        <TextView
+            android:id="@+id/tvSessionLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sessione Lettura"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#000000" />
+
         <TextView
             android:id="@+id/tvItemCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
-            android:textColor="#CCFF00"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:paddingEnd="8dp" />
+            android:text="Totale: 0 items"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="4dp" />
     </LinearLayout>
 
-    <!-- Filtro status -->
+    <!-- Filter Buttons Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="#F5F5F5"
-        android:padding="8dp">
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:background="#EEEEEE">
 
         <Button
             android:id="@+id/btnFilterAll"
             android:layout_width="0dp"
-            android:layout_height="36dp"
             android:layout_weight="1"
-            android:text="Tutti"
+            android:layout_height="36dp"
+            android:text="All"
             android:textSize="12sp"
-            android:backgroundTint="#9E9E9E"
             android:textColor="#FFFFFF"
+            android:backgroundTint="#2196F3"
             android:layout_marginEnd="4dp" />
 
         <Button
             android:id="@+id/btnFilterExpected"
             android:layout_width="0dp"
-            android:layout_height="36dp"
             android:layout_weight="1"
+            android:layout_height="36dp"
             android:text="Expected"
             android:textSize="12sp"
-            android:backgroundTint="#4CAF50"
-            android:textColor="#FFFFFF"
-            android:layout_marginEnd="4dp" />
+            android:textColor="#4CAF50"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginHorizontal="4dp" />
 
         <Button
             android:id="@+id/btnFilterUnexpected"
             android:layout_width="0dp"
-            android:layout_height="36dp"
             android:layout_weight="1"
+            android:layout_height="36dp"
             android:text="Unexp."
             android:textSize="12sp"
-            android:backgroundTint="#FF9800"
-            android:textColor="#FFFFFF"
-            android:layout_marginEnd="4dp" />
+            android:textColor="#FF9800"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginHorizontal="4dp" />
 
         <Button
             android:id="@+id/btnFilterLost"
             android:layout_width="0dp"
-            android:layout_height="36dp"
             android:layout_weight="1"
+            android:layout_height="36dp"
             android:text="Lost"
             android:textSize="12sp"
-            android:backgroundTint="#F44336"
-            android:textColor="#FFFFFF" />
+            android:textColor="#F44336"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginStart="4dp" />
     </LinearLayout>
 
-    <!-- Lista items -->
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="24dp"
+        android:visibility="gone" />
+
+    <!-- Empty State -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nessun tag trovato"
+        android:textSize="16sp"
+        android:textColor="#999999"
+        android:layout_gravity="center"
+        android:layout_marginTop="48dp"
+        android:visibility="gone" />
+
+    <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvItems"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
+        android:layout_height="match_parent"
         android:padding="8dp" />
-
-    <!-- Empty state -->
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:text="Nessun tag trovato"
-        android:gravity="center"
-        android:textColor="#999999"
-        android:textSize="16sp"
-        android:visibility="gone" />
 </LinearLayout>
