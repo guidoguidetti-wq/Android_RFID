@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.rfid.reader.databinding.ActivityLoginBinding
 import com.rfid.reader.network.LoginRequest
 import com.rfid.reader.network.RetrofitClient
+import com.rfid.reader.utils.AppLogger
 import com.rfid.reader.utils.SessionManager
 import kotlinx.coroutines.launch
 
@@ -108,6 +109,7 @@ class LoginActivity : AppCompatActivity() {
                 android.util.Log.e(TAG, "Login error", e)
                 showError("Errore di connessione: ${e.message}")
                 setLoginInProgress(false)
+                AppLogger.error(applicationContext, "Login", "Errore connessione login utente: $username", e)
             }
         }
     }

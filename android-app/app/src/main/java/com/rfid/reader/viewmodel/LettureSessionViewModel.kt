@@ -10,6 +10,7 @@ import com.rfid.reader.network.LettureCommitRequest
 import com.rfid.reader.network.LettureInitRequest
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.rfid.RFIDManager
+import com.rfid.reader.utils.AppLogger
 import com.rfid.reader.utils.BeepHelper
 import com.rfid.reader.utils.SettingsManager
 import com.rfid.reader.utils.SessionManager
@@ -114,10 +115,13 @@ class LettureSessionViewModel(application: Application) : AndroidViewModel(appli
                     val err = "Errore init sessione: ${response.code()}"
                     _initError.value = err
                     android.util.Log.e(TAG, err)
+                    AppLogger.error(getApplication(), "LettureSession", err)
                 }
             } catch (e: Exception) {
-                _initError.value = "Errore di rete: ${e.message}"
+                val err = "Errore di rete init sessione: ${e.message}"
+                _initError.value = err
                 android.util.Log.e(TAG, "Init session error", e)
+                AppLogger.error(getApplication(), "LettureSession", "Init sessione fallita", e)
             }
         }
     }
@@ -373,10 +377,13 @@ class LettureSessionViewModel(application: Application) : AndroidViewModel(appli
                     val count = response.body()?.processedCount ?: 0
                     _commitResult.value = Pair(true, "Confermati $count tag")
                 } else {
-                    _commitResult.value = Pair(false, "Errore commit: ${response.code()}")
+                    val err = "Errore commit sessione: ${response.code()}"
+                    _commitResult.value = Pair(false, err)
+                    AppLogger.error(getApplication(), "LettureSession", err)
                 }
             } catch (e: Exception) {
                 _commitResult.value = Pair(false, "Errore di rete: ${e.message}")
+                AppLogger.error(getApplication(), "LettureSession", "Commit sessione fallito", e)
             }
         }
     }

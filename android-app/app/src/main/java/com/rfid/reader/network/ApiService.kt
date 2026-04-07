@@ -320,6 +320,9 @@ data class LettureItemResponse(
     val fldd01: String?
 )
 
+// Log Models
+data class AppLogRequest(val userId: String, val logText: String)
+
 // Checklist Models
 data class ChecklistResponse(
     val chk_id: Int,
@@ -353,6 +356,10 @@ data class DeleteInventoryResponse(
 )
 
 interface ApiService {
+    // Log Endpoint
+    @POST("api/log")
+    suspend fun postLog(@Body request: AppLogRequest): Response<Map<String, Any>>
+
     // Auth Endpoints
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>

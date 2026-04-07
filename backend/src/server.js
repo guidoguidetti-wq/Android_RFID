@@ -25,6 +25,7 @@ const authRoutes = require('./routes/auth');
 const inventoriesRoutes = require('./routes/inventories');
 const checklistRoutes = require('./routes/checklist');
 const lettureRoutes = require('./routes/letture');
+const logRoutes     = require('./routes/log');
 
 app.use('/api/rfid', rfidRoutes);
 app.use('/api/items', itemsRoutes);
@@ -35,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/inventories', inventoriesRoutes);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/letture', lettureRoutes);
+app.use('/api/log',     logRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

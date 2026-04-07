@@ -9,6 +9,7 @@ import com.rfid.reader.network.BatchScanToInventoryRequest
 import com.rfid.reader.network.RetrofitClient
 import com.rfid.reader.network.ScanToInventoryRequest
 import com.rfid.reader.rfid.RFIDManager
+import com.rfid.reader.utils.AppLogger
 import com.rfid.reader.utils.BeepHelper
 import com.rfid.reader.utils.SettingsManager
 import com.rfid.reader.utils.SessionManager
@@ -608,6 +609,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error clearing inventory", e)
+            AppLogger.error(getApplication(), "InventoryScan", "Clear inventario $currentInventoryId fallito", e)
             throw e
         }
     }
@@ -626,6 +628,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error closing inventory", e)
+            AppLogger.error(getApplication(), "InventoryScan", "Close inventario $currentInventoryId fallito", e)
             throw e
         }
     }
@@ -644,6 +647,7 @@ class InventoryScanViewModel(application: Application) : AndroidViewModel(applic
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error deleting inventory", e)
+            AppLogger.error(getApplication(), "InventoryScan", "Delete inventario $currentInventoryId fallito", e)
             throw e
         }
     }
