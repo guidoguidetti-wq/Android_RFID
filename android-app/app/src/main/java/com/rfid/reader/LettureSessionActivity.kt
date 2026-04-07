@@ -132,6 +132,7 @@ class LettureSessionActivity : AppCompatActivity() {
         btnSettings          = findViewById(R.id.btnSettings)
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { onBackPressed() }
+        findViewById<ImageButton>(R.id.btnDetails).setOnClickListener { openDetails() }
     }
 
     private fun setupUI() {
@@ -238,6 +239,13 @@ class LettureSessionActivity : AppCompatActivity() {
 
         btnClear.setOnClickListener { showClearDialog() }
         btnConfirm.setOnClickListener { showConfirmDialog() }
+    }
+
+    private fun openDetails() {
+        val intent = android.content.Intent(this, LettureDetailsActivity::class.java).apply {
+            putExtra("USER_ID", userId)
+        }
+        startActivity(intent)
     }
 
     private fun showClearDialog() {

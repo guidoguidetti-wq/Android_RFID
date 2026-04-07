@@ -307,6 +307,18 @@ data class LettureCommitRequest(
 )
 data class LettureCommitResponse(val success: Boolean, val processedCount: Int, val message: String? = null)
 
+data class LettureItemResponse(
+    val epc: String,
+    val inv_expected: Boolean?,
+    val inv_unexpected: Boolean?,
+    val inv_lost: Boolean?,
+    val product_id: String?,
+    val fld01: String?,
+    val fld02: String?,
+    val fld03: String?,
+    val fldd01: String?
+)
+
 // Checklist Models
 data class ChecklistResponse(
     val chk_id: Int,
@@ -428,6 +440,9 @@ interface ApiService {
 
     @GET("api/letture/counters")
     suspend fun getLettureCounters(@Query("userId") userId: String): Response<LettureCountersResponse>
+
+    @GET("api/letture/items")
+    suspend fun getLettureItems(@Query("userId") userId: String): Response<List<LettureItemResponse>>
 
     @POST("api/letture/batch-scan")
     suspend fun lettureBatchScan(@Body request: LettureBatchScanRequest): Response<LettureBatchScanResponse>

@@ -32,8 +32,8 @@ exports.initSession = async (req, res) => {
 
       if (checklistMode === 'epc') {
         const insertRes = await pool.query(
-          `INSERT INTO "inventory_items_temp" (int_id, int_epc, inv_lost, inv_expected, inv_unexpected)
-           SELECT $1, ckp_epc_id, true, false, false
+          `INSERT INTO "inventory_items_temp" (int_id, int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+           SELECT $1, 0, ckp_epc_id, true, false, false
            FROM checklist_items WHERE ckp_chl_id = $2`,
           [userId, chkId]
         );
@@ -237,10 +237,10 @@ exports.batchScan = async (req, res) => {
 
     // 6. Bulk INSERT nuovi
     if (toInsertNew.length > 0) {
-      const vals   = toInsertNew.map((_, i) => `($${i*4+1}, $${i*4+2}, $${i*4+3}, $${i*4+4}, false)`).join(', ');
+      const vals   = toInsertNew.map((_, i) => `($${i*4+1}, 0, $${i*4+2}, $${i*4+3}, $${i*4+4}, false)`).join(', ');
       const params = toInsertNew.flatMap(item => [userId, item.epc, item.invExpected, item.invUnexpected]);
       await pool.query(
-        `INSERT INTO "inventory_items_temp" (int_id, int_epc, inv_expected, inv_unexpected, inv_lost) VALUES ${vals}`,
+        `INSERT INTO "inventory_items_temp" (int_id, int_inv_id, int_epc, inv_expected, inv_unexpected, inv_lost) VALUES ${vals}`,
         params
       );
     }
@@ -299,6 +299,38 @@ exports.batchScan = async (req, res) => {
 };
 
 /**
+ * GET /api/letture/items?userId=xxx
+ * Restituisce gli EPCs della sessione temp con status e info prodotto.
+ */
+exports.getItems = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const result = await pool.query(
+      `SELECT
+         t.int_epc        AS epc,
+         t.inv_expected,
+         t.inv_unexpected,
+         t.inv_lost,
+         i.item_product_id AS product_id,
+         p.fld01, p.fld02, p.fld03, p.fldd01
+       FROM "inventory_items_temp" t
+       LEFT JOIN "Items"    i ON t.int_epc = i.item_id
+       LEFT JOIN "Products" p ON i.item_product_id = p.product_id
+       WHERE t.int_id = $1
+       ORDER BY t.inv_lost DESC, t.inv_unexpected DESC, t.int_epc`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error getting letture items:', error);
+    res.status(500).json({ error: 'Failed to get items', details: error.message });
+  }
+};
+
+/**
  * DELETE /api/letture/clear?userId=xxx
  * Pulisce la sessione temp dell'utente (reset counters).
  */
@@ -325,8 +357,8 @@ exports.clearSession = async (req, res) => {
     let repopulated = 0;
     if (checklistMode === 'checklist_epc' && chkId) {
       const insRes = await pool.query(
-        `INSERT INTO "inventory_items_temp" (int_id, int_epc, inv_lost, inv_expected, inv_unexpected)
-         SELECT $1, ckp_epc_id, true, false, false
+        `INSERT INTO "inventory_items_temp" (int_id, int_inv_id, int_epc, inv_lost, inv_expected, inv_unexpected)
+         SELECT $1, 0, ckp_epc_id, true, false, false
          FROM checklist_items WHERE ckp_chl_id = $2`,
         [userId, chkId]
       );
