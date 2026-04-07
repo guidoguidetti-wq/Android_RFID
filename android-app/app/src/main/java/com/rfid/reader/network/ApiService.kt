@@ -282,6 +282,31 @@ data class MovementCountItem(val epc: String, val count: Int)
 data class TransferRequest(val place_id: String, val zone_id: String, val epcs: List<String>, val mov_ref: String? = null, val mov_user: String? = null)
 data class TransferResponse(val success: Boolean, val transferred_count: Int?)
 
+// Letture Models
+data class LettureInitRequest(val userId: String, val checklistMode: String, val checklistCode: String? = null)
+data class LettureInitResponse(val success: Boolean, val mode: String, val totalExpected: Int, val chkId: Int?)
+data class LettureCountersResponse(val total_count: Int, val expected_count: Int, val unexpected_count: Int, val lost_count: Int)
+data class LettureBatchScanRequest(
+    val userId: String,
+    val epcs: List<String>,
+    val checklistMode: String,
+    val chkId: Int? = null,
+    val mode: String? = null,
+    val placeId: String? = null,
+    val zoneId: String? = null
+)
+data class LettureBatchScanResponse(val success: Boolean, val processedCount: Int, val counters: InventoryCounters?)
+data class LettureCommitRequest(
+    val userId: String,
+    val registraTransferimento: Boolean,
+    val destPlaceId: String? = null,
+    val destZoneId: String? = null,
+    val riferimento: String? = null,
+    val note: String? = null,
+    val readerName: String? = null
+)
+data class LettureCommitResponse(val success: Boolean, val processedCount: Int, val message: String? = null)
+
 // Checklist Models
 data class ChecklistResponse(
     val chk_id: Int,
@@ -396,6 +421,26 @@ interface ApiService {
     // Transfer Endpoint
     @POST("api/rfid/transfer")
     suspend fun transferTags(@Body body: TransferRequest): Response<TransferResponse>
+
+    // Letture Endpoints
+    @POST("api/letture/init")
+    suspend fun initLettureSession(@Body request: LettureInitRequest): Response<LettureInitResponse>
+
+    @GET("api/letture/counters")
+    suspend fun getLettureCounters(@Query("userId") userId: String): Response<LettureCountersResponse>
+
+    @POST("api/letture/batch-scan")
+    suspend fun lettureBatchScan(@Body request: LettureBatchScanRequest): Response<LettureBatchScanResponse>
+
+    @DELETE("api/letture/clear")
+    suspend fun clearLettureSession(
+        @Query("userId") userId: String,
+        @Query("checklistMode") checklistMode: String? = null,
+        @Query("chkId") chkId: Int? = null
+    ): Response<Map<String, Any>>
+
+    @POST("api/letture/commit")
+    suspend fun commitLettureSession(@Body request: LettureCommitRequest): Response<LettureCommitResponse>
 
     // RFID Endpoints
     @POST("api/rfid/scan")

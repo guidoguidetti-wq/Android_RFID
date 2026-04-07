@@ -2,7 +2,6 @@ package com.rfid.reader
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.rfid.reader.databinding.ActivityDashboardBinding
@@ -76,10 +75,10 @@ class DashboardActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Trasferimenti
+        // Letture
         binding.btnTransfers.setOnClickListener {
-            android.util.Log.d(TAG, "Navigating to TransfersActivity")
-            Toast.makeText(this, "Trasferimenti - coming soon", Toast.LENGTH_SHORT).show()
+            android.util.Log.d(TAG, "Navigating to LettureActivity")
+            startActivity(Intent(this, LettureActivity::class.java))
         }
     }
 

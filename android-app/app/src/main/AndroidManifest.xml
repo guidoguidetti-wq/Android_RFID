@@ -172,6 +172,21 @@
             android:name=".MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <!-- Letture -->
+        <activity
+            android:name=".LettureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="Letture" />
+
+        <!-- Letture Session (scan RFID) -->
+        <activity
+            android:name=".LettureSessionActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true"
+            android:label="Sessione Lettura" />
     </application>
 
 </manifest>
